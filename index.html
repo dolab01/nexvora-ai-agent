@@ -1,0 +1,127 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXVORA AI Agent</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#090b16;color:#f5f5fa;font-family:Arial,sans-serif}
+.app{display:flex;min-height:100vh}
+.sidebar{width:245px;background:#101326;padding:25px 18px;border-right:1px solid #252943}
+.logo{font-size:23px;font-weight:bold;color:#a78bfa;margin-bottom:40px}
+.logo span{color:white}
+.nav{padding:13px;margin:8px 0;border-radius:9px;color:#a7abc0}
+.nav.active{background:#292044;color:#c4a8ff}
+.main{flex:1;padding:30px;max-width:1250px;margin:auto;width:100%}
+.top{display:flex;justify-content:space-between;align-items:center;gap:15px}
+h1{font-size:27px;margin:0 0 8px}
+.muted{color:#9298b2;font-size:14px}
+.status{background:#142d27;color:#64e5b0;padding:9px 13px;border-radius:20px;font-size:12px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:17px;margin:30px 0}
+.card{background:#14182a;border:1px solid #292e48;padding:22px;border-radius:14px}
+.card p{color:#a5aac0;font-size:13px}
+.number{font-size:27px;font-weight:bold;margin-top:15px}
+.panel{background:#14182a;border:1px solid #292e48;border-radius:15px;padding:24px;margin-bottom:20px}
+.panel h2{font-size:18px;margin-top:0}
+.chat{min-height:220px;background:#0d1020;border-radius:12px;padding:18px;margin:15px 0;color:#c5c9dc}
+.inputrow{display:flex;gap:10px}
+input{flex:1;min-width:0;background:#0c1020;border:1px solid #343a56;padding:14px;color:white;border-radius:9px}
+button{background:#8054e8;color:white;border:0;padding:13px 20px;border-radius:9px;cursor:pointer}
+button:hover{background:#986cf5}
+.task{padding:13px 0;border-bottom:1px solid #292e48;color:#c7c9d8;font-size:14px}
+footer{color:#707790;font-size:12px;margin-top:25px}
+@media(max-width:700px){
+.sidebar{width:65px;padding:15px 8px}
+.logo{font-size:12px;writing-mode:vertical-rl;margin:10px auto 35px}
+.nav{font-size:0;text-align:center}
+.nav:after{content:"•";font-size:22px}
+.main{padding:18px}
+.cards{grid-template-columns:1fr}
+.top{align-items:flex-start;flex-direction:column}
+.inputrow{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+<div class="logo">NEXVORA<span> AI</span></div>
+<div class="nav active">Dashboard</div>
+<div class="nav">AI Assistant</div>
+<div class="nav">Products</div>
+<div class="nav">Marketing</div>
+<div class="nav">Customers</div>
+<div class="nav">Analytics</div>
+<div class="nav">Settings</div>
+</aside>
+
+<main class="main">
+<div class="top">
+<div>
+<h1>Welcome to NEXVORA AI</h1>
+<div class="muted">Your independent AI business manager</div>
+</div>
+<div class="status">● Dashboard online</div>
+</div>
+
+<div class="cards">
+<div class="card">
+<div class="muted">AI Agent</div>
+<div class="number">Ready</div>
+<p>Waiting for AI connection</p>
+</div>
+<div class="card">
+<div class="muted">Products</div>
+<div class="number">01</div>
+<p>Initial product setup</p>
+</div>
+<div class="card">
+<div class="muted">Automation</div>
+<div class="number">0</div>
+<p>Workflows configured</p>
+</div>
+</div>
+
+<section class="panel">
+<h2>Talk to your AI Agent</h2>
+<div class="muted">Your business assistant will help manage NEXVORA.</div>
+<div class="chat" id="chat">
+<strong>NEXVORA Assistant</strong>
+<p>Hello! I'm your future business assistant. My AI connection is not configured yet. We're building it step by step.</p>
+</div>
+<div class="inputrow">
+<input id="message" placeholder="What would you like your agent to do?">
+<button onclick="sendMessage()">Send</button>
+</div>
+</section>
+
+<section class="panel">
+<h2>Business Management</h2>
+<div class="task">📦 Product management — Coming soon</div>
+<div class="task">📢 Automated marketing — Coming soon</div>
+<div class="task">💬 Customer support — Coming soon</div>
+<div class="task">📊 Sales analytics — Coming soon</div>
+</section>
+
+<footer>NEXVORA AI AGENT · Independent Business Automation Platform</footer>
+</main>
+</div>
+
+<script>
+function sendMessage(){
+const input=document.getElementById('message');
+const chat=document.getElementById('chat');
+if(!input.value.trim()) return;
+const message=document.createElement('p');
+message.textContent='You: '+input.value;
+chat.appendChild(message);
+const reply=document.createElement('p');
+reply.textContent='Your message has been added to the dashboard. The AI engine will be connected in the next development stage.';
+chat.appendChild(reply);
+input.value='';
+}
+</script>
+</body>
+</html>
