@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json({ limit: "20kb" }));
 app.use(express.static(__dirname));
 
-const MODEL = "gemini-3.1-flash-lite";
+const MODEL = "openai/gpt-oss-120b";
 
 const instructions = `
 You are NEXVORA AI, an intelligent digital business manager.
@@ -31,20 +31,20 @@ Ask for approval before taking external business actions.
 app.get("/api/health", (req, res) => {
   res.json({
     status: "online",
-    aiConnected: Boolean(process.env.GEMINI_API_KEY),
+    aiConnected: Boolean(process.env.GROQ_API_KEY),
     agent: "NEXVORA AI",
-    provider: "Google Gemini",
+    provider: "Groq",
     model: MODEL
   });
 });
 
 app.post("/api/chat", async (req, res) => {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
 
     if (!apiKey) {
       return res.status(503).json({
-        error: "Gemini API key is missing in Render."
+        error: "Groq API key is missing in Render."
       });
     }
 
@@ -63,27 +63,27 @@ app.post("/api/chat", async (req, res) => {
     }
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
+      "https://api.groq.com/openai/v1/chat/completions",
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-goog-api-key": apiKey
+          "Authorization": `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: instructions }]
-          },
-          contents: [
+          model: MODEL,
+          messages: [
+            {
+              role: "system",
+              content: instructions
+            },
             {
               role: "user",
-              parts: [{ text: message.trim() }]
+              content: message.trim()
             }
           ],
-          generationConfig: {
-            maxOutputTokens: 1200,
-            temperature: 0.7
-          }
+          temperature: 0.7,
+          max_completion_tokens: 1200
         })
       }
     );
@@ -92,38 +92,23 @@ app.post("/api/chat", async (req, res) => {
 
     if (!response.ok) {
       console.error(
-        "Gemini error:",
+        "Groq API error:",
         response.status,
         data.error?.message || JSON.stringify(data)
       );
 
-      if (response.status === 429) {
-        return res.status(429).json({
-          error: "Gemini free usage limit reached. Please try again later."
-        });
-      }
-
-      if (response.status === 503) {
-        return res.status(503).json({
-          error: "Gemini is temporarily busy. Please try again shortly."
-        });
-      }
-
       return res.status(502).json({
-        error: "Gemini could not process your request. Check Render logs."
+        error: "Groq could not respond. Check Render logs for details."
       });
     }
 
-    const reply = data.candidates?.[0]?.content?.parts
-      ?.map(part => part.text || "")
-      .join("")
-      .trim();
+    const reply = data.choices?.[0]?.message?.content?.trim();
 
     if (!reply) {
-      console.error("Empty Gemini response:", JSON.stringify(data));
+      console.error("Empty Groq response:", JSON.stringify(data));
 
       return res.status(502).json({
-        error: "Gemini returned an empty response."
+        error: "Groq returned an empty response."
       });
     }
 
