@@ -108,6 +108,7 @@ footer{color:#687790;text-align:center;font-size:11px;margin-top:40px}
     <button data-page="growth" type="button" onclick="showPage('growth')">↗ Growth Planner</button>
     <button data-page="sales" type="button" onclick="showPage('sales')">↗ Sales Tracker</button>
     <button data-page="tasks" type="button" onclick="showPage('tasks')">☑ Daily Tasks</button>
+    <button data-page="insights" type="button" onclick="showPage('insights')">✦ Business Insights</button>
   </nav>
   <div class="sidebar-bottom">
     <strong>NEXVORA AI</strong><br><br>
@@ -336,6 +337,23 @@ footer{color:#687790;text-align:center;font-size:11px;margin-top:40px}
   </div>
 </section>
 
+<section class="page" id="insights">
+  <div class="card">
+    <h3>✦ AI Business Insights</h3>
+    <p class="metric-note">Get recommendations based on products, sales and tasks recorded in this browser. Sales are not imported automatically from Selar.</p>
+    <div class="grid" style="margin:18px 0">
+      <div class="card"><div class="metric-label">Products</div><div class="metric" id="insightProducts">0</div></div>
+      <div class="card"><div class="metric-label">Recorded sales</div><div class="metric" id="insightSales">0</div></div>
+      <div class="card"><div class="metric-label">Revenue</div><div class="metric" id="insightRevenue">₦0</div></div>
+      <div class="card"><div class="metric-label">Open tasks</div><div class="metric" id="insightTasks">0</div></div>
+    </div>
+    <button class="btn" id="insightsBtn" type="button" onclick="generateBusinessInsights()">✦ Analyse My Business</button>
+    <div class="section-title">Your business recommendations</div>
+    <div class="result" id="insightsResult">Select “Analyse My Business” to get practical recommendations from your recorded data.</div>
+    <button class="btn secondary" type="button" onclick="copyBusinessInsights()" style="margin-top:12px">Copy Insights</button>
+  </div>
+</section>
+
 <footer>NEXVORA AI · Your digital business command centre</footer>
 </main>
 </div>
@@ -375,7 +393,8 @@ function showPage(page) {
     marketing:"Marketing Studio",
     growth:"AI Business Growth Planner",
     sales:"Sales Tracker",
-    tasks:"Daily Business Tasks"
+    tasks:"Daily Business Tasks",
+    insights:"Business Insights"
   };
   $("pageTitle").textContent=titles[page] || "NEXVORA";
 }
@@ -455,8 +474,66 @@ function renderOverview(){
   $("taskCount").textContent=tasks.filter(t=>!t.done).length;
 }
 function renderAll(){
-  renderProducts();renderSales();renderTasks();renderOverview();renderActivity();
+  renderProducts();renderSales();renderTasks();renderOverview();renderActivity();renderInsightStats();
 }
+
+function renderInsightStats(){
+  if (!$("insightProducts")) return;
+  $("insightProducts").textContent=products.length;
+  $("insightSales").textContent=sales.length;
+  $("insightRevenue").textContent=money(sales.reduce((sum,s)=>sum+Number(s.amount||0),0));
+  $("insightTasks").textContent=tasks.filter(t=>!t.done).length;
+}
+
+async function generateBusinessInsights(){
+  const button=$("insightsBtn"), result=$("insightsResult");
+  const snapshot={
+    products:products.map(p=>({name:p.name,price:Number(p.price||0),hasProductLink:!!p.link})),
+    sales:sales.map(s=>({product:s.product,amount:Number(s.amount||0),date:s.date})),
+    tasks:tasks.map(t=>({task:t.text,completed:!!t.done})),
+    totals:{
+      productCount:products.length,
+      recordedSales:sales.length,
+      recordedRevenue:sales.reduce((sum,s)=>sum+Number(s.amount||0),0),
+      openTasks:tasks.filter(t=>!t.done).length,
+      completedTasks:tasks.filter(t=>t.done).length
+    }
+  };
+  const prompt=[
+    "You are NEXVORA, a practical and honest small-business analyst.",
+    "Analyse only the business data supplied below. The data is manually recorded and may be incomplete; do not assume it represents all business activity.",
+    "Give a concise report with: (1) current snapshot, (2) useful patterns you can actually support from the data, (3) three prioritized next actions, (4) one simple target for the next 7 days, and (5) missing information that would improve the analysis.",
+    "If there are no sales, say there is not enough sales data to identify sales trends. If there are no products or tasks, say so plainly.",
+    "Do not invent customers, costs, profit, conversion rates, traffic, market facts, product features, or sales. Revenue is not profit. Never promise income or guaranteed results.",
+    "Format with clear headings and beginner-friendly steps.",
+    "BUSINESS DATA (JSON):",
+    JSON.stringify(snapshot)
+  ].join("\n");
+  button.disabled=true;
+  button.textContent="Analysing...";
+  result.textContent="NEXVORA is reviewing your recorded business data...";
+  try{
+    const insights=await askAI(prompt);
+    result.textContent=insights||"No insights were generated.";
+    recordActivity("Business insights generated");
+  }catch(error){
+    result.textContent="Insights Error: "+error.message;
+  }finally{
+    button.disabled=false;
+    button.textContent="✦ Analyse My Business";
+  }
+}
+
+async function copyBusinessInsights(){
+  try{
+    await navigator.clipboard.writeText($("insightsResult").textContent);
+    alert("Business insights copied successfully!");
+  }catch(error){
+    alert("Copy failed. Please select and copy the insights manually.");
+  }
+}
+
+
 
 function escapeHTML(value){
   return String(value).replace(/[&<>"']/g,c=>({
