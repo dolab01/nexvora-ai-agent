@@ -101,13 +101,13 @@ footer{color:#687790;text-align:center;font-size:11px;margin-top:40px}
   <div class="tagline">YOUR AI BUSINESS MANAGER</div>
   <div class="nav-label">WORKSPACE</div>
   <nav class="nav">
-    <button class="active" data-page="overview">◈ Overview</button>
-    <button data-page="assistant">✧ AI Assistant</button>
-    <button data-page="products">▣ Products</button>
-    <button data-page="marketing">◉ Marketing</button>
-    <button data-page="growth">↗ Growth Planner</button>
-    <button data-page="sales">↗ Sales Tracker</button>
-    <button data-page="tasks">☑ Daily Tasks</button>
+    <button class="active" data-page="overview" type="button" onclick="showPage('overview')">◈ Overview</button>
+    <button data-page="assistant" type="button" onclick="showPage('assistant')">✧ AI Assistant</button>
+    <button data-page="products" type="button" onclick="showPage('products')">▣ Products</button>
+    <button data-page="marketing" type="button" onclick="showPage('marketing')">◉ Marketing</button>
+    <button data-page="growth" type="button" onclick="showPage('growth')">↗ Growth Planner</button>
+    <button data-page="sales" type="button" onclick="showPage('sales')">↗ Sales Tracker</button>
+    <button data-page="tasks" type="button" onclick="showPage('tasks')">☑ Daily Tasks</button>
   </nav>
   <div class="sidebar-bottom">
     <strong>NEXVORA AI</strong><br><br>
@@ -150,7 +150,6 @@ footer{color:#687790;text-align:center;font-size:11px;margin-top:40px}
       <p class="metric-note">Build a practical action plan to attract customers and grow product sales.</p>
       <button class="btn" onclick="showPage('growth')">Plan Business Growth</button>
     </div>
-  </div>
   <div class="section-title">Recent business activity</div>
   <div class="card" id="recentActivity"><p class="empty">Your recorded activity will appear here.</p></div>
 </section>
