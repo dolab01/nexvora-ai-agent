@@ -105,6 +105,7 @@ footer{color:#687790;text-align:center;font-size:11px;margin-top:40px}
     <button data-page="assistant">✧ AI Assistant</button>
     <button data-page="products">▣ Products</button>
     <button data-page="marketing">◉ Marketing</button>
+    <button data-page="growth">↗ Growth Planner</button>
     <button data-page="sales">↗ Sales Tracker</button>
     <button data-page="tasks">☑ Daily Tasks</button>
   </nav>
@@ -142,6 +143,12 @@ footer{color:#687790;text-align:center;font-size:11px;margin-top:40px}
       <h3>◉ Marketing Studio</h3>
       <p class="metric-note">Generate social media campaigns and product promotions.</p>
       <button class="btn" onclick="showPage('marketing')">Create Campaign</button>
+    </div>
+  </div>
+    <div class="card">
+      <h3>↗ AI Business Growth Planner</h3>
+      <p class="metric-note">Build a practical action plan to attract customers and grow product sales.</p>
+      <button class="btn" onclick="showPage('growth')">Plan Business Growth</button>
     </div>
   </div>
   <div class="section-title">Recent business activity</div>
@@ -275,6 +282,30 @@ footer{color:#687790;text-align:center;font-size:11px;margin-top:40px}
   </div>
 </section>
 
+<section class="page" id="growth">
+  <div class="card">
+    <h3>↗ AI Business Growth Planner</h3>
+    <p class="metric-note">Create a practical 7-day plan with clear actions and ways to measure progress.</p>
+    <form id="growthForm">
+      <div class="field"><label>Business or product name</label><input id="growthName" placeholder="AI Income Starter Kit" required></div>
+      <div class="field"><label>What do you sell, and what does it help people do?</label><textarea id="growthOffer" placeholder="Describe your product, its real benefits and price if known..." required></textarea></div>
+      <div class="form-row">
+        <div class="field"><label>Customer platform</label><select id="growthPlatform"><option>Facebook</option><option>TikTok</option><option>Instagram</option><option>YouTube</option><option>WhatsApp</option><option>Multiple platforms</option></select></div>
+        <div class="field"><label>Main goal</label><select id="growthGoal"><option>Get my first customers</option><option>Increase product sales</option><option>Grow an audience</option><option>Get more enquiries</option><option>Build customer trust</option></select></div>
+      </div>
+      <div class="field"><label>Biggest challenge right now</label><textarea id="growthChallenge" placeholder="For example: I get views but few people buy..."></textarea></div>
+      <div class="form-row">
+        <div class="field"><label>Available marketing budget</label><select id="growthBudget"><option>₦0 — free methods only</option><option>Below ₦5,000</option><option>₦5,000–₦20,000</option><option>Above ₦20,000</option></select></div>
+        <div class="field"><label>Time available each day</label><select id="growthTime"><option>30 minutes</option><option>1 hour</option><option>2 hours</option><option>3 hours or more</option></select></div>
+      </div>
+      <button class="btn" id="growthBtn" type="submit">✧ Create My 7-Day Growth Plan</button>
+    </form>
+    <div class="section-title">Your business growth plan</div>
+    <div class="result" id="growthResult">Your personalized 7-day action plan will appear here.</div>
+    <button class="btn secondary" type="button" onclick="copyGrowthPlan()" style="margin-top:12px">Copy Growth Plan</button>
+  </div>
+</section>
+
 <section class="page" id="sales">
   <div class="card">
     <h3>Sales Tracker</h3>
@@ -343,6 +374,7 @@ function showPage(page) {
     assistant:"AI Business Assistant",
     products:"Product Management",
     marketing:"Marketing Studio",
+    growth:"AI Business Growth Planner",
     sales:"Sales Tracker",
     tasks:"Daily Business Tasks"
   };
@@ -548,6 +580,41 @@ async function copyMarketingContent() {
   } catch (error) {
     alert("Copy failed. Please select and copy the content manually.");
   }
+}
+
+$("growthForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const name=$("growthName").value.trim(), offer=$("growthOffer").value.trim();
+  const platform=$("growthPlatform").value, goal=$("growthGoal").value;
+  const challenge=$("growthChallenge").value.trim() || "No specific challenge supplied.";
+  const budget=$("growthBudget").value, time=$("growthTime").value;
+  const button=$("growthBtn"), result=$("growthResult");
+  const prompt=[
+    "You are NEXVORA, a practical and honest small-business growth strategist.",
+    "Create a realistic 7-day growth plan using these details:",
+    "BUSINESS/PRODUCT: "+name, "OFFER: "+offer, "PLATFORM: "+platform,
+    "GOAL: "+goal, "CHALLENGE: "+challenge, "BUDGET: "+budget, "TIME PER DAY: "+time,
+    "Give a brief assessment and label assumptions. Create day-by-day actions for days 1-7 with content ideas and calls to action. Prioritize free actions for a zero budget. Include a daily checklist and three useful metrics. Suggest ethical ways to build trust and convert interest into customers. Do not promise sales, income, virality or guaranteed results. Never invent product features, testimonials or market data. Keep the plan beginner-friendly and achievable within the available time."
+  ].join("\n");
+  button.disabled=true;
+  button.textContent="Building your plan...";
+  result.textContent="NEXVORA is preparing your 7-day growth plan...";
+  try {
+    const plan=await askAI(prompt);
+    result.textContent=plan || "No growth plan was generated.";
+    recordActivity("Business growth plan generated");
+  } catch(error) {
+    result.textContent="Growth Planner Error: "+error.message;
+  } finally {
+    button.disabled=false;
+    button.textContent="✧ Create My 7-Day Growth Plan";
+  }
+});
+
+async function copyGrowthPlan(){
+  const content=$("growthResult").textContent;
+  try { await navigator.clipboard.writeText(content); alert("Growth plan copied successfully!"); }
+  catch(error) { alert("Copy failed. Please select and copy the plan manually."); }
 }
 
 renderAll();
