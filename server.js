@@ -1,6 +1,5 @@
 
 const express = require("express");
-const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,20 +9,15 @@ app.use(express.static(__dirname));
 
 const instructions = `
 You are NEXVORA AI, an intelligent digital business manager.
-
 Your business is NEXVORA, a digital products store.
 
-Your responsibilities:
-1. Help grow the digital products business.
-2. Generate marketing campaigns and social media content.
-3. Write product descriptions and sales copy.
-4. Suggest realistic online business opportunities.
-5. Help improve customer experience.
-6. Analyze business ideas and suggest practical actions.
+Help grow the business, create marketing campaigns,
+write product descriptions, suggest realistic online
+business opportunities and improve customer experience.
 
 Be professional, friendly, practical and honest.
-Never claim a sale, payment or action has happened unless verified.
 Never promise guaranteed income.
+Never claim a sale or payment happened unless verified.
 Ask for approval before taking external business actions.
 `;
 
@@ -39,14 +33,13 @@ app.get("/api/health", (req, res) => {
 app.post("/api/chat", async (req, res) => {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
+    const message = req.body.message;
 
     if (!apiKey) {
       return res.status(503).json({
-        error: "Gemini is not configured. Add GEMINI_API_KEY in Render."
+        error: "Gemini API key is missing in Render."
       });
     }
-
-    const message = req.body.message;
 
     if (typeof message !== "string" || !message.trim()) {
       return res.status(400).json({
@@ -56,12 +49,12 @@ app.post("/api/chat", async (req, res) => {
 
     if (message.length > 4000) {
       return res.status(400).json({
-        error: "Message is too long. Maximum 4000 characters."
+        error: "Message is too long."
       });
     }
 
     const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/interactions",
       {
         method: "POST",
         headers: {
@@ -69,16 +62,8 @@ app.post("/api/chat", async (req, res) => {
           "x-goog-api-key": apiKey
         },
         body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: instructions }]
-          },
-          contents: [{
-            role: "user",
-            parts: [{ text: message.trim() }]
-          }],
-          generationConfig: {
-            maxOutputTokens: 1200
-          }
+          model: "gemini-3.8-flash",
+          input: instructions + "\n\nUser request: " + message.trim()
         })
       }
     );
@@ -86,20 +71,30 @@ app.post("/api/chat", async (req, res) => {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("Gemini API error:", response.status, data.error?.message);
+      console.error(
+        "Gemini API error:",
+        response.status,
+        JSON.stringify(data.error || data)
+      );
+
       return res.status(502).json({
-        error: "Gemini could not respond. Please try again."
+        error: "Gemini API error. Check Render logs for details."
       });
     }
 
-    const reply = data.candidates?.[0]?.content?.parts
-      ?.map(part => part.text || "")
-      .join("")
-      .trim();
+    const reply = data.output_text ||
+      (data.steps || [])
+        .filter(step => step.type === "model_output")
+        .flatMap(step => step.content || [])
+        .filter(part => part.type === "text")
+        .map(part => part.text)
+        .join("\n");
 
     if (!reply) {
+      console.error("Gemini returned no text:", JSON.stringify(data));
+
       return res.status(502).json({
-        error: "Gemini returned an empty response. Please try again."
+        error: "Gemini returned an empty response."
       });
     }
 
@@ -107,6 +102,7 @@ app.post("/api/chat", async (req, res) => {
 
   } catch (error) {
     console.error("Server error:", error.message);
+
     res.status(500).json({
       error: "The AI could not respond. Please try again."
     });
@@ -114,5 +110,5 @@ app.post("/api/chat", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`NEXVORA AI running on port ${PORT}`);
+  console.log("NEXVORA AI running on port " + PORT);
 });
