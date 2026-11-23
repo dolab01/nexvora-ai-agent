@@ -1,6 +1,5 @@
 
 const express = require("express");
-const OpenAI = require("openai");
 const path = require("path");
 
 const app = express();
@@ -8,10 +7,6 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: "20kb" }));
 app.use(express.static(__dirname));
-
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  : null;
 
 const instructions = `
 You are NEXVORA AI, an intelligent digital business manager.
@@ -27,8 +22,7 @@ Your responsibilities:
 6. Analyze business ideas and suggest practical actions.
 
 Be professional, friendly, practical and honest.
-Never claim that a sale, payment or action has happened
-unless it has been verified.
+Never claim a sale, payment or action has happened unless verified.
 Never promise guaranteed income.
 Ask for approval before taking external business actions.
 `;
@@ -36,16 +30,19 @@ Ask for approval before taking external business actions.
 app.get("/api/health", (req, res) => {
   res.json({
     status: "online",
-    aiConnected: Boolean(openai),
-    agent: "NEXVORA AI"
+    aiConnected: Boolean(process.env.GEMINI_API_KEY),
+    agent: "NEXVORA AI",
+    provider: "Google Gemini"
   });
 });
 
 app.post("/api/chat", async (req, res) => {
   try {
-    if (!openai) {
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
       return res.status(503).json({
-        error: "AI is not configured. Add your API key in Render."
+        error: "Gemini is not configured. Add GEMINI_API_KEY in Render."
       });
     }
 
@@ -63,20 +60,53 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    const response = await openai.responses.create({
-      model: process.env.OPENAI_MODEL || "gpt-6.2-astra",
-      instructions,
-      input: message.trim(),
-      max_output_tokens: 1200
-    });
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{ text: instructions }]
+          },
+          contents: [{
+            role: "user",
+            parts: [{ text: message.trim() }]
+          }],
+          generationConfig: {
+            maxOutputTokens: 1200
+          }
+        })
+      }
+    );
 
-    res.json({
-      reply: response.output_text
-    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Gemini API error:", response.status, data.error?.message);
+      return res.status(502).json({
+        error: "Gemini could not respond. Please try again."
+      });
+    }
+
+    const reply = data.candidates?.[0]?.content?.parts
+      ?.map(part => part.text || "")
+      .join("")
+      .trim();
+
+    if (!reply) {
+      return res.status(502).json({
+        error: "Gemini returned an empty response. Please try again."
+      });
+    }
+
+    res.json({ reply });
 
   } catch (error) {
-    console.error("AI error:", error.message);
-
+    console.error("Server error:", error.message);
     res.status(500).json({
       error: "The AI could not respond. Please try again."
     });
