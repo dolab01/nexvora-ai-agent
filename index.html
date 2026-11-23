@@ -4,213 +4,423 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NEXVORA AI Agent</title>
+<title>NEXVORA | AI Business Manager</title>
 <style>
+:root {
+  --bg:#0b1020;
+  --panel:#141c30;
+  --panel2:#19243b;
+  --text:#f3f6ff;
+  --muted:#94a3b8;
+  --accent:#8b7cff;
+  --line:#293550;
+  --green:#36d399;
+}
 *{box-sizing:border-box}
-body{margin:0;background:#090b16;color:#f5f5fa;font-family:Arial,sans-serif}
-.app{display:flex;min-height:100vh}
-.sidebar{width:245px;background:#101326;padding:25px 18px;border-right:1px solid #252943}
-.logo{font-size:23px;font-weight:bold;color:#a78bfa;margin-bottom:40px}
-.logo span{color:white}
-.nav{padding:13px;margin:8px 0;border-radius:9px;color:#a7abc0}
-.nav.active{background:#292044;color:#c4a8ff}
-.main{flex:1;padding:30px;max-width:1250px;margin:auto;width:100%}
-.top{display:flex;justify-content:space-between;align-items:center;gap:15px}
-h1{font-size:27px;margin:0 0 8px}
-.muted{color:#9298b2;font-size:14px}
-.status{background:#142d27;color:#64e5b0;padding:9px 13px;border-radius:20px;font-size:12px}
-.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:17px;margin:30px 0}
-.card{background:#14182a;border:1px solid #292e48;padding:22px;border-radius:14px}
-.card p{color:#a5aac0;font-size:13px}
-.number{font-size:27px;font-weight:bold;margin-top:15px}
-.panel{background:#14182a;border:1px solid #292e48;border-radius:15px;padding:24px;margin-bottom:20px}
-.panel h2{font-size:18px;margin-top:0}
-.chat{min-height:220px;max-height:430px;overflow-y:auto;background:#0d1020;border-radius:12px;padding:18px;margin:15px 0;color:#c5c9dc}
-.chat p{white-space:pre-wrap;line-height:1.6}
-.user{color:#c4a8ff}
-.assistant{color:#a7f3d0}
-.inputrow{display:flex;gap:10px}
-input{flex:1;min-width:0;background:#0c1020;border:1px solid #343a56;padding:14px;color:white;border-radius:9px}
-button{background:#8054e8;color:white;border:0;padding:13px 20px;border-radius:9px;cursor:pointer}
-button:hover{background:#986cf5}
-button:disabled{opacity:.5;cursor:not-allowed}
-.task{padding:13px 0;border-bottom:1px solid #292e48;color:#c7c9d8;font-size:14px}
-footer{color:#707790;font-size:12px;margin-top:25px}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:245px;background:#10182b;border-right:1px solid var(--line);padding:25px 16px;flex-shrink:0}
+.logo{font-size:25px;font-weight:900;letter-spacing:2px;padding:8px 12px}
+.logo span{color:var(--accent)}
+.tagline{color:var(--muted);font-size:11px;padding:0 12px 28px}
+.nav-label{font-size:10px;color:#71809c;letter-spacing:2px;padding:12px}
+.nav button{display:flex;width:100%;border:0;background:transparent;color:#aab6cc;padding:13px 14px;border-radius:10px;text-align:left;margin:3px 0;gap:12px}
+.nav button:hover,.nav button.active{background:#252c4a;color:white}
+.nav button.active{border-left:3px solid var(--accent)}
+.sidebar-bottom{margin-top:40px;border-top:1px solid var(--line);padding:18px 12px;color:var(--muted);font-size:12px}
+.main{flex:1;min-width:0;padding:28px 34px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:30px}
+.topbar h1{font-size:25px;margin:0}
+.topbar p{color:var(--muted);font-size:13px;margin:7px 0 0}
+.status{background:#12342e;color:#65e6bd;padding:9px 13px;border-radius:30px;font-size:12px}
+.page{display:none}
+.page.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:20px}
+.metric-label{color:var(--muted);font-size:12px}
+.metric{font-size:27px;font-weight:800;margin:13px 0 5px}
+.metric-note{color:#7f8da7;font-size:11px}
+.section-title{font-size:17px;font-weight:700;margin:26px 0 15px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.action{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}
+.action:last-child{border:0}
+.action small{display:block;color:var(--muted);margin-top:5px}
+.btn{border:0;background:var(--accent);color:white;padding:11px 16px;border-radius:9px;font-weight:700}
+.btn:hover{opacity:.88}
+.btn.secondary{background:#293550;color:#e7eaff}
+.btn.danger{background:#522d3b}
+input,textarea,select{width:100%;background:#0e1729;border:1px solid var(--line);color:white;padding:12px;border-radius:9px;outline:none}
+textarea{resize:vertical;min-height:100px}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+.field{margin:13px 0}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:7px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:13px 10px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:500}
+.empty{color:var(--muted);font-size:13px;padding:20px 0}
+.chat-box{height:380px;overflow:auto;background:#0e1729;border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.bubble{padding:12px 14px;border-radius:12px;margin:10px 0;max-width:90%;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5;font-size:14px}
+.bubble.user{background:#383363;margin-left:auto}
+.bubble.ai{background:#1b2941}
+.chat-form{display:flex;gap:10px}
+.chat-form input{flex:1}
+.result{white-space:pre-wrap;line-height:1.6;background:#0e1729;border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:16px;min-height:80px}
+.task-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.task-row input{width:auto}
+.task-row.done span{text-decoration:line-through;color:var(--muted)}
+.mobile-menu{display:none}
+footer{color:#687790;text-align:center;font-size:11px;margin-top:40px}
+@media(max-width:950px){.grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){
-.sidebar{width:65px;padding:15px 8px}
-.logo{font-size:12px;writing-mode:vertical-rl;margin:10px auto 35px}
-.nav{font-size:0;text-align:center}
-.nav:after{content:"•";font-size:22px}
-.main{padding:18px}
-.cards{grid-template-columns:1fr}
-.top{align-items:flex-start;flex-direction:column}
-.inputrow{flex-direction:column}
+ .layout{display:block}
+ .sidebar{width:100%;padding:12px;border-right:0;border-bottom:1px solid var(--line)}
+ .logo{font-size:21px}
+ .tagline,.nav-label,.sidebar-bottom{display:none}
+ .nav{display:flex;overflow-x:auto;gap:5px}
+ .nav button{white-space:nowrap;width:auto;padding:10px;font-size:12px}
+ .main{padding:20px 14px}
+ .topbar h1{font-size:21px}
+ .grid{grid-template-columns:1fr 1fr;gap:9px}
+ .card{padding:14px}
+ .metric{font-size:22px}
+ .two-col{grid-template-columns:1fr}
+ .form-row{grid-template-columns:1fr}
+ .chat-form{flex-wrap:wrap}
+ .chat-form input{min-width:100%}
 }
 </style>
 </head>
 <body>
-<div class="app">
+<div class="layout">
 <aside class="sidebar">
-<div class="logo">NEXVORA<span> AI</span></div>
-<div class="nav active">Dashboard</div>
-<div class="nav">AI Assistant</div>
-<div class="nav">Products</div>
-<div class="nav">Marketing</div>
-<div class="nav">Customers</div>
-<div class="nav">Analytics</div>
-<div class="nav">Settings</div>
+  <div class="logo">NEX<span>VORA</span></div>
+  <div class="tagline">YOUR AI BUSINESS MANAGER</div>
+  <div class="nav-label">WORKSPACE</div>
+  <nav class="nav">
+    <button class="active" data-page="overview">◈ Overview</button>
+    <button data-page="assistant">✧ AI Assistant</button>
+    <button data-page="products">▣ Products</button>
+    <button data-page="marketing">◉ Marketing</button>
+    <button data-page="sales">↗ Sales Tracker</button>
+    <button data-page="tasks">☑ Daily Tasks</button>
+  </nav>
+  <div class="sidebar-bottom">
+    <strong>NEXVORA AI</strong><br><br>
+    Powered by Groq<br>
+    Your business, organized.
+  </div>
 </aside>
 
 <main class="main">
-<div class="top">
-<div>
-<h1>Welcome to NEXVORA AI</h1>
-<div class="muted">Your independent AI business manager</div>
-</div>
-<div class="status" id="status">● Checking connection...</div>
-</div>
+<header class="topbar">
+  <div>
+    <h1 id="pageTitle">Business Overview</h1>
+    <p>Your digital business command centre.</p>
+  </div>
+  <div class="status">● AI Connected</div>
+</header>
 
-<div class="cards">
-<div class="card">
-<div class="muted">AI Agent</div>
-<div class="number" id="aiStatus">Checking</div>
-<p>OpenAI connection status</p>
-</div>
-<div class="card">
-<div class="muted">Products</div>
-<div class="number">01</div>
-<p>Initial product setup</p>
-</div>
-<div class="card">
-<div class="muted">Automation</div>
-<div class="number">0</div>
-<p>Workflows configured</p>
-</div>
-</div>
-
-<section class="panel">
-<h2>Talk to your AI Agent</h2>
-<div class="muted">Your business assistant is ready to help manage NEXVORA.</div>
-
-<div class="chat" id="chat" aria-live="polite">
-<strong>NEXVORA Assistant</strong>
-<p class="assistant">Hello! I'm NEXVORA AI. Ask me about digital products, marketing, business ideas or growing your online store.</p>
-</div>
-
-<div class="inputrow">
-<input id="message" maxlength="4000" placeholder="What would you like your agent to do?" autocomplete="off">
-<button id="sendBtn" onclick="sendMessage()">Send</button>
-</div>
+<section class="page active" id="overview">
+  <div class="grid">
+    <div class="card"><div class="metric-label">Products</div><div class="metric" id="productCount">0</div><div class="metric-note">Products recorded</div></div>
+    <div class="card"><div class="metric-label">Recorded Sales</div><div class="metric" id="salesCount">0</div><div class="metric-note">Sales entries</div></div>
+    <div class="card"><div class="metric-label">Revenue Recorded</div><div class="metric" id="revenue">₦0</div><div class="metric-note">Manually recorded</div></div>
+    <div class="card"><div class="metric-label">Pending Tasks</div><div class="metric" id="taskCount">0</div><div class="metric-note">Tasks to complete</div></div>
+  </div>
+  <div class="section-title">Business quick actions</div>
+  <div class="two-col">
+    <div class="card">
+      <h3>✧ AI Business Assistant</h3>
+      <p class="metric-note">Ask NEXVORA to plan, write, research ideas or help with your business.</p>
+      <button class="btn" onclick="showPage('assistant')">Open AI Assistant</button>
+    </div>
+    <div class="card">
+      <h3>◉ Marketing Studio</h3>
+      <p class="metric-note">Generate social media campaigns and product promotions.</p>
+      <button class="btn" onclick="showPage('marketing')">Create Campaign</button>
+    </div>
+  </div>
+  <div class="section-title">Recent business activity</div>
+  <div class="card" id="recentActivity"><p class="empty">Your recorded activity will appear here.</p></div>
 </section>
 
-<section class="panel">
-<h2>Business Management</h2>
-<div class="task">📦 Product management — Coming soon</div>
-<div class="task">📢 Automated marketing — Coming soon</div>
-<div class="task">💬 Customer support — Coming soon</div>
-<div class="task">📊 Sales analytics — Coming soon</div>
+<section class="page" id="assistant">
+  <div class="card">
+    <h3>✧ Chat with NEXVORA</h3>
+    <p class="metric-note">Your AI business manager, powered by Groq.</p>
+    <div class="chat-box" id="chatBox">
+      <div class="bubble ai">Hello! I'm NEXVORA, your AI business manager. What would you like to work on today?</div>
+    </div>
+    <form class="chat-form" id="chatForm">
+      <input id="chatInput" placeholder="Ask NEXVORA anything..." autocomplete="off" required>
+      <button class="btn" id="sendBtn">Send</button>
+    </form>
+    <p class="metric-note" id="chatStatus">AI responses require an internet connection.</p>
+  </div>
 </section>
 
-<footer>NEXVORA AI AGENT · Independent Business Automation Platform</footer>
+<section class="page" id="products">
+  <div class="card">
+    <h3>Product Management</h3>
+    <p class="metric-note">Record your digital products and their prices. This does not automatically publish them to Selar.</p>
+    <form id="productForm">
+      <div class="form-row">
+        <div class="field"><label>Product name</label><input id="productName" placeholder="AI Income Starter Kit" required></div>
+        <div class="field"><label>Price (₦)</label><input id="productPrice" type="number" min="0" step="0.01" placeholder="5000" required></div>
+      </div>
+      <div class="field"><label>Product link (optional)</label><input id="productLink" type="url" placeholder="https://selar.com/..."></div>
+      <button class="btn">Add Product</button>
+    </form>
+  </div>
+  <div class="section-title">Your products</div>
+  <div class="card table-wrap">
+    <table><thead><tr><th>Product</th><th>Price</th><th>Link</th><th>Action</th></tr></thead><tbody id="productTable"></tbody></table>
+    <p class="empty" id="productEmpty">No products added yet.</p>
+  </div>
+</section>
+
+<section class="page" id="marketing">
+  <div class="card">
+    <h3>◉ Marketing Studio</h3>
+    <p class="metric-note">Generate marketing ideas, captions, sales copy and content plans.</p>
+    <form id="marketingForm">
+      <div class="field"><label>What are you promoting?</label><input id="campaignProduct" placeholder="AI Income Starter Kit" required></div>
+      <div class="form-row">
+        <div class="field"><label>Platform</label><select id="campaignPlatform"><option>Facebook</option><option>TikTok</option><option>Instagram</option><option>YouTube</option><option>WhatsApp</option><option>Multiple platforms</option></select></div>
+        <div class="field"><label>Content type</label><select id="campaignType"><option>7-day marketing plan</option><option>Sales caption</option><option>Promotional post</option><option>Short video script</option><option>Product description</option><option>30-day content calendar</option></select></div>
+      </div>
+      <button class="btn" id="marketingBtn">Generate with AI</button>
+    </form>
+    <div class="result" id="marketingResult">Your marketing content will appear here.</div>
+  </div>
+</section>
+
+<section class="page" id="sales">
+  <div class="card">
+    <h3>Sales Tracker</h3>
+    <p class="metric-note">Manually record confirmed sales. These entries are not automatically imported from Selar.</p>
+    <form id="salesForm">
+      <div class="form-row">
+        <div class="field"><label>Product</label><select id="saleProduct" required><option value="">Choose a product</option></select></div>
+        <div class="field"><label>Amount received (₦)</label><input id="saleAmount" type="number" min="0.01" step="0.01" placeholder="5000" required></div>
+      </div>
+      <button class="btn">Record Sale</button>
+    </form>
+  </div>
+  <div class="section-title">Sales history</div>
+  <div class="card table-wrap">
+    <table><thead><tr><th>Date</th><th>Product</th><th>Amount</th><th>Action</th></tr></thead><tbody id="salesTable"></tbody></table>
+    <p class="empty" id="salesEmpty">No sales recorded yet.</p>
+  </div>
+</section>
+
+<section class="page" id="tasks">
+  <div class="card">
+    <h3>Daily Business Tasks</h3>
+    <p class="metric-note">Organize your work and track completed tasks.</p>
+    <form id="taskForm" class="chat-form">
+      <input id="taskInput" placeholder="Add a business task..." required>
+      <button class="btn">Add Task</button>
+    </form>
+    <div id="taskList" style="margin-top:18px"></div>
+  </div>
+</section>
+
+<footer>NEXVORA AI · Your digital business command centre</footer>
 </main>
 </div>
 
 <script>
-const chat = document.getElementById("chat");
-const input = document.getElementById("message");
-const sendBtn = document.getElementById("sendBtn");
+const $ = id => document.getElementById(id);
+const money = amount => "₦" + Number(amount).toLocaleString("en-NG",{maximumFractionDigits:2});
 
-function addMessage(name, text, type) {
-  const p = document.createElement("p");
-  p.className = type;
-  const strong = document.createElement("strong");
-  strong.textContent = name + ": ";
-  p.appendChild(strong);
-  p.appendChild(document.createTextNode(text));
-  chat.appendChild(p);
-  chat.scrollTop = chat.scrollHeight;
+function load(key, fallback=[]) {
+  try { return JSON.parse(localStorage.getItem("nexvora_"+key)) || fallback; }
+  catch { return fallback; }
+}
+function save(key, data) {
+  localStorage.setItem("nexvora_"+key, JSON.stringify(data));
 }
 
-async function checkConnection() {
-  const status = document.getElementById("status");
-  const aiStatus = document.getElementById("aiStatus");
+let products = load("products");
+let sales = load("sales");
+let tasks = load("tasks");
+let activity = load("activity");
 
-  try {
-    const response = await fetch("/api/health");
-    const data = await response.json();
-
-    if (response.ok && data.aiConnected) {
-      status.textContent = "● AI Connected";
-      aiStatus.textContent = "Ready";
-    } else {
-      status.textContent = "● AI Not Configured";
-      aiStatus.textContent = "Offline";
-    }
-  } catch (error) {
-    status.textContent = "● Server unavailable";
-    aiStatus.textContent = "Offline";
-  }
+function recordActivity(text) {
+  activity.unshift({text,date:new Date().toLocaleString()});
+  activity = activity.slice(0,10);
+  save("activity",activity);
+  renderActivity();
 }
 
-async function sendMessage() {
-  const message = input.value.trim();
-
-  if (!message || sendBtn.disabled) return;
-
-  addMessage("You", message, "user");
-  input.value = "";
-  sendBtn.disabled = true;
-  sendBtn.textContent = "Thinking...";
-
-  const loading = document.createElement("p");
-  loading.className = "assistant";
-  loading.textContent = "NEXVORA is thinking...";
-  chat.appendChild(loading);
-  chat.scrollTop = chat.scrollHeight;
-
-  try {
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ message })
-    });
-
-    const data = await response.json();
-    loading.remove();
-
-    if (!response.ok) {
-      throw new Error(data.error || "AI request failed.");
-    }
-
-    addMessage(
-      "NEXVORA",
-      data.reply || "The AI returned an empty response.",
-      "assistant"
-    );
-
-  } catch (error) {
-    loading.remove();
-    addMessage(
-      "NEXVORA Error",
-      error.message || "Unable to contact the AI. Please try again.",
-      "assistant"
-    );
-  } finally {
-    sendBtn.disabled = false;
-    sendBtn.textContent = "Send";
-    input.focus();
-  }
+function showPage(page) {
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===page));
+  $(page).classList.add("active");
+  const titles = {
+    overview:"Business Overview",
+    assistant:"AI Business Assistant",
+    products:"Product Management",
+    marketing:"Marketing Studio",
+    sales:"Sales Tracker",
+    tasks:"Daily Business Tasks"
+  };
+  $("pageTitle").textContent=titles[page] || "NEXVORA";
 }
+document.querySelectorAll(".nav button").forEach(b=>b.addEventListener("click",()=>showPage(b.dataset.page)));
 
-input.addEventListener("keydown", function(event) {
-  if (event.key === "Enter") {
-    sendMessage();
-  }
+function renderProducts() {
+  $("productTable").innerHTML=products.map((p,i)=>`
+    <tr>
+      <td>${escapeHTML(p.name)}</td>
+      <td>${money(p.price)}</td>
+      <td>${p.link?`<a href="${safeURL(p.link)}" target="_blank" rel="noopener" style="color:#a99cff">Open link</a>`:"—"}</td>
+      <td><button class="btn danger" onclick="deleteProduct(${i})">Delete</button></td>
+    </tr>`).join("");
+  $("productEmpty").style.display=products.length?"none":"block";
+  $("saleProduct").innerHTML='<option value="">Choose a product</option>'+products.map((p,i)=>`<option value="${i}">${escapeHTML(p.name)}</option>`).join("");
+}
+function deleteProduct(i) {
+  products.splice(i,1);save("products",products);renderAll();recordActivity("Product deleted");
+}
+$("productForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  products.push({
+    name:$("productName").value.trim(),
+    price:Number($("productPrice").value),
+    link:$("productLink").value.trim()
+  });
+  save("products",products);
+  e.target.reset();renderAll();recordActivity("Product added");
 });
 
-checkConnection();
+function renderSales() {
+  $("salesTable").innerHTML=sales.map((s,i)=>`
+    <tr><td>${escapeHTML(s.date)}</td><td>${escapeHTML(s.product)}</td><td>${money(s.amount)}</td>
+    <td><button class="btn danger" onclick="deleteSale(${i})">Delete</button></td></tr>`).join("");
+  $("salesEmpty").style.display=sales.length?"none":"block";
+}
+function deleteSale(i) {
+  sales.splice(i,1);save("sales",sales);renderAll();recordActivity("Sales entry deleted");
+}
+$("salesForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const index=$("saleProduct").value;
+  if(index==="")return alert("Please choose a product first.");
+  sales.unshift({
+    product:products[Number(index)].name,
+    amount:Number($("saleAmount").value),
+    date:new Date().toLocaleDateString()
+  });
+  save("sales",sales);e.target.reset();renderAll();recordActivity("Sale recorded");
+});
+
+function renderTasks() {
+  $("taskList").innerHTML=tasks.length?tasks.map((t,i)=>`
+    <div class="task-row ${t.done?"done":""}">
+      <input type="checkbox" ${t.done?"checked":""} onchange="toggleTask(${i},this.checked)">
+      <span style="flex:1">${escapeHTML(t.text)}</span>
+      <button class="btn danger" onclick="deleteTask(${i})">Delete</button>
+    </div>`).join(""):'<p class="empty">No tasks yet. Add your first task above.</p>';
+}
+$("taskForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  tasks.push({text:$("taskInput").value.trim(),done:false});
+  save("tasks",tasks);e.target.reset();renderAll();recordActivity("Task added");
+});
+function toggleTask(i,done){tasks[i].done=done;save("tasks",tasks);renderAll();}
+function deleteTask(i){tasks.splice(i,1);save("tasks",tasks);renderAll();recordActivity("Task deleted");}
+
+function renderActivity(){
+  $("recentActivity").innerHTML=activity.length?activity.slice(0,5).map(a=>`
+    <div class="action"><div>${escapeHTML(a.text)}<small>${escapeHTML(a.date)}</small></div></div>`).join(""):'<p class="empty">Your recorded activity will appear here.</p>';
+}
+
+function renderOverview(){
+  $("productCount").textContent=products.length;
+  $("salesCount").textContent=sales.length;
+  $("revenue").textContent=money(sales.reduce((sum,s)=>sum+Number(s.amount),0));
+  $("taskCount").textContent=tasks.filter(t=>!t.done).length;
+}
+function renderAll(){
+  renderProducts();renderSales();renderTasks();renderOverview();renderActivity();
+}
+
+function escapeHTML(value){
+  return String(value).replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+function safeURL(value){
+  try{
+    const u=new URL(value);
+    return ["https:","http:"].includes(u.protocol)?escapeHTML(u.href):"#";
+  }catch{return "#";}
+}
+
+async function askAI(message){
+  const response=await fetch("/api/chat",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({message})
+  });
+  const data=await response.json();
+  if(!response.ok)throw new Error(data.error||"AI request failed.");
+  return data.reply;
+}
+
+function addBubble(text,type){
+  const box=$("chatBox");
+  const bubble=document.createElement("div");
+  bubble.className="bubble "+type;
+  bubble.textContent=text;
+  box.appendChild(bubble);
+  box.scrollTop=box.scrollHeight;
+  return bubble;
+}
+
+$("chatForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const message=$("chatInput").value.trim();
+  if(!message)return;
+  $("chatInput").value="";
+  addBubble(message,"user");
+  const waiting=addBubble("NEXVORA is thinking...","ai");
+  $("sendBtn").disabled=true;
+  $("chatStatus").textContent="Connecting to NEXVORA AI...";
+  try{
+    const reply=await askAI(message);
+    waiting.textContent=reply||"No response received.";
+    $("chatStatus").textContent="Response received.";
+  }catch(error){
+    waiting.textContent="NEXVORA Error: "+error.message;
+    $("chatStatus").textContent="Please try again.";
+  }finally{$("sendBtn").disabled=false;}
+});
+
+$("marketingForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const product=$("campaignProduct").value.trim();
+  const platform=$("campaignPlatform").value;
+  const type=$("campaignType").value;
+  const button=$("marketingBtn");
+  const result=$("marketingResult");
+  button.disabled=true;button.textContent="Generating...";
+  result.textContent="NEXVORA is creating your marketing content...";
+  try{
+    const prompt=`Create a ${type} for my product: ${product}. Target platform: ${platform}. Give practical, engaging, honest marketing content with captions and calls to action.`;
+    result.textContent=await askAI(prompt);
+    recordActivity("Marketing content generated");
+  }catch(error){result.textContent="Error: "+error.message;}
+  finally{button.disabled=false;button.textContent="Generate with AI";}
+});
+
+renderAll();
 </script>
 </body>
 </html>
