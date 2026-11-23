@@ -109,6 +109,7 @@ footer{color:#687790;text-align:center;font-size:11px;margin-top:40px}
     <button data-page="sales" type="button" onclick="showPage('sales')">↗ Sales Tracker</button>
     <button data-page="tasks" type="button" onclick="showPage('tasks')">☑ Daily Tasks</button>
     <button data-page="insights" type="button" onclick="showPage('insights')">✦ Business Insights</button>
+    <button data-page="daily" type="button" onclick="showPage('daily')">☀ Daily Manager</button>
   </nav>
   <div class="sidebar-bottom">
     <strong>NEXVORA AI</strong><br><br>
@@ -354,6 +355,30 @@ footer{color:#687790;text-align:center;font-size:11px;margin-top:40px}
   </div>
 </section>
 
+<section class="page" id="daily">
+  <div class="card">
+    <h3>☀ Your Daily Business Manager</h3>
+    <p class="metric-note">Get a focused plan for today using your products, manually recorded sales and open tasks.</p>
+    <div class="two-col" style="margin:18px 0">
+      <div class="card">
+        <div class="metric-label">Today's date</div>
+        <div class="metric" id="dailyDate" style="font-size:20px">Today</div>
+        <div class="metric-note">Based on your device date</div>
+      </div>
+      <div class="card">
+        <div class="metric-label">Open tasks to consider</div>
+        <div class="metric" id="dailyOpenTasks">0</div>
+        <div class="metric-note">From your Daily Tasks list</div>
+      </div>
+    </div>
+    <button class="btn" id="dailyBtn" type="button" onclick="generateDailyBriefing()">☀ Prepare Today's Business Plan</button>
+    <button class="btn secondary" type="button" onclick="copyDailyBriefing()" style="margin-left:8px">Copy Daily Plan</button>
+    <div class="section-title">Today's priorities and actions</div>
+    <div class="result" id="dailyResult">Your daily plan will appear here. Select “Prepare Today's Business Plan” to begin.</div>
+    <p class="metric-note" style="margin-top:12px">This is an on-demand AI briefing, not a background scheduler. Your data is read from this browser only; it is not synced with Selar.</p>
+  </div>
+</section>
+
 <footer>NEXVORA AI · Your digital business command centre</footer>
 </main>
 </div>
@@ -394,7 +419,8 @@ function showPage(page) {
     growth:"AI Business Growth Planner",
     sales:"Sales Tracker",
     tasks:"Daily Business Tasks",
-    insights:"Business Insights"
+    insights:"Business Insights",
+    daily:"Daily Business Manager"
   };
   $("pageTitle").textContent=titles[page] || "NEXVORA";
 }
@@ -521,6 +547,74 @@ async function generateBusinessInsights(){
   }finally{
     button.disabled=false;
     button.textContent="✦ Analyse My Business";
+  }
+}
+
+function renderDailyManager(){
+  if (!$("dailyDate")) return;
+  const now=new Date();
+  $("dailyDate").textContent=now.toLocaleDateString("en-NG",{weekday:"short",day:"numeric",month:"short",year:"numeric"});
+  $("dailyOpenTasks").textContent=tasks.filter(t=>!t.done).length;
+  const saved=loadDailyBriefing();
+  if(saved && saved.date===localDateKey()){
+    $("dailyResult").textContent=saved.text;
+  }
+}
+
+function localDateKey(){
+  const d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+
+function loadDailyBriefing(){
+  try{return JSON.parse(localStorage.getItem("nexvora_daily_briefing")||"null");}
+  catch{return null;}
+}
+
+async function generateDailyBriefing(){
+  const button=$("dailyBtn"), result=$("dailyResult");
+  const today=localDateKey();
+  const openTasks=tasks.filter(t=>!t.done).map(t=>t.text);
+  const snapshot={
+    date:today,
+    products:products.map(p=>({name:p.name,price:Number(p.price||0)})),
+    sales:sales.map(s=>({product:s.product,amount:Number(s.amount||0),date:s.date})),
+    recordedRevenue:sales.reduce((sum,s)=>sum+Number(s.amount||0),0),
+    openTasks,
+    completedTasks:tasks.filter(t=>t.done).length
+  };
+  const prompt=[
+    "You are NEXVORA, the user's practical daily digital business manager.",
+    "Prepare a focused, realistic plan for the date supplied in the business data.",
+    "Use only the supplied data. The records may be incomplete and are not live Selar data.",
+    "Organize the answer into: TOP 3 PRIORITIES, MARKETING ACTION (include one ready-to-use post idea and a short call to action), SALES ACTION (a realistic way to follow up or present the offer), ADMIN/TASKS (consider the existing open tasks), and END-OF-DAY CHECK (three things to review).",
+    "Fit the plan to a solo beginner with limited resources. Prefer free actions. Keep the plan achievable and specific.",
+    "If no products or sales are recorded, do not invent them; give sensible setup steps instead. Do not invent product features, customer messages, costs, profit, sales, traffic or performance data. Never promise income or guaranteed results.",
+    "BUSINESS DATA:",
+    JSON.stringify(snapshot)
+  ].join("\n");
+  button.disabled=true;
+  button.textContent="Preparing your plan...";
+  result.textContent="NEXVORA is preparing today's priorities...";
+  try{
+    const briefing=await askAI(prompt);
+    result.textContent=briefing||"No daily plan was generated.";
+    localStorage.setItem("nexvora_daily_briefing",JSON.stringify({date:today,text:result.textContent}));
+    recordActivity("Daily business plan prepared");
+  }catch(error){
+    result.textContent="Daily Manager Error: "+error.message;
+  }finally{
+    button.disabled=false;
+    button.textContent="☀ Prepare Today's Business Plan";
+  }
+}
+
+async function copyDailyBriefing(){
+  try{
+    await navigator.clipboard.writeText($("dailyResult").textContent);
+    alert("Today's business plan copied successfully!");
+  }catch(error){
+    alert("Copy failed. Please select and copy the plan manually.");
   }
 }
 
@@ -704,6 +798,7 @@ async function copyGrowthPlan(){
 }
 
 renderAll();
+renderDailyManager();
 </script>
 </body>
 </html>
