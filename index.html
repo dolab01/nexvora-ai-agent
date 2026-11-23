@@ -25,11 +25,15 @@ h1{font-size:27px;margin:0 0 8px}
 .number{font-size:27px;font-weight:bold;margin-top:15px}
 .panel{background:#14182a;border:1px solid #292e48;border-radius:15px;padding:24px;margin-bottom:20px}
 .panel h2{font-size:18px;margin-top:0}
-.chat{min-height:220px;background:#0d1020;border-radius:12px;padding:18px;margin:15px 0;color:#c5c9dc}
+.chat{min-height:220px;max-height:430px;overflow-y:auto;background:#0d1020;border-radius:12px;padding:18px;margin:15px 0;color:#c5c9dc}
+.chat p{white-space:pre-wrap;line-height:1.6}
+.user{color:#c4a8ff}
+.assistant{color:#a7f3d0}
 .inputrow{display:flex;gap:10px}
 input{flex:1;min-width:0;background:#0c1020;border:1px solid #343a56;padding:14px;color:white;border-radius:9px}
 button{background:#8054e8;color:white;border:0;padding:13px 20px;border-radius:9px;cursor:pointer}
 button:hover{background:#986cf5}
+button:disabled{opacity:.5;cursor:not-allowed}
 .task{padding:13px 0;border-bottom:1px solid #292e48;color:#c7c9d8;font-size:14px}
 footer{color:#707790;font-size:12px;margin-top:25px}
 @media(max-width:700px){
@@ -63,14 +67,14 @@ footer{color:#707790;font-size:12px;margin-top:25px}
 <h1>Welcome to NEXVORA AI</h1>
 <div class="muted">Your independent AI business manager</div>
 </div>
-<div class="status">● Dashboard online</div>
+<div class="status" id="status">● Checking connection...</div>
 </div>
 
 <div class="cards">
 <div class="card">
 <div class="muted">AI Agent</div>
-<div class="number">Ready</div>
-<p>Waiting for AI connection</p>
+<div class="number" id="aiStatus">Checking</div>
+<p>OpenAI connection status</p>
 </div>
 <div class="card">
 <div class="muted">Products</div>
@@ -86,14 +90,16 @@ footer{color:#707790;font-size:12px;margin-top:25px}
 
 <section class="panel">
 <h2>Talk to your AI Agent</h2>
-<div class="muted">Your business assistant will help manage NEXVORA.</div>
-<div class="chat" id="chat">
+<div class="muted">Your business assistant is ready to help manage NEXVORA.</div>
+
+<div class="chat" id="chat" aria-live="polite">
 <strong>NEXVORA Assistant</strong>
-<p>Hello! I'm your future business assistant. My AI connection is not configured yet. We're building it step by step.</p>
+<p class="assistant">Hello! I'm NEXVORA AI. Ask me about digital products, marketing, business ideas or growing your online store.</p>
 </div>
+
 <div class="inputrow">
-<input id="message" placeholder="What would you like your agent to do?">
-<button onclick="sendMessage()">Send</button>
+<input id="message" maxlength="4000" placeholder="What would you like your agent to do?" autocomplete="off">
+<button id="sendBtn" onclick="sendMessage()">Send</button>
 </div>
 </section>
 
@@ -110,18 +116,101 @@ footer{color:#707790;font-size:12px;margin-top:25px}
 </div>
 
 <script>
-function sendMessage(){
-const input=document.getElementById('message');
-const chat=document.getElementById('chat');
-if(!input.value.trim()) return;
-const message=document.createElement('p');
-message.textContent='You: '+input.value;
-chat.appendChild(message);
-const reply=document.createElement('p');
-reply.textContent='Your message has been added to the dashboard. The AI engine will be connected in the next development stage.';
-chat.appendChild(reply);
-input.value='';
+const chat = document.getElementById("chat");
+const input = document.getElementById("message");
+const sendBtn = document.getElementById("sendBtn");
+
+function addMessage(name, text, type) {
+  const p = document.createElement("p");
+  p.className = type;
+  const strong = document.createElement("strong");
+  strong.textContent = name + ": ";
+  p.appendChild(strong);
+  p.appendChild(document.createTextNode(text));
+  chat.appendChild(p);
+  chat.scrollTop = chat.scrollHeight;
 }
+
+async function checkConnection() {
+  const status = document.getElementById("status");
+  const aiStatus = document.getElementById("aiStatus");
+
+  try {
+    const response = await fetch("/api/health");
+    const data = await response.json();
+
+    if (response.ok && data.aiConnected) {
+      status.textContent = "● AI Connected";
+      aiStatus.textContent = "Ready";
+    } else {
+      status.textContent = "● AI Not Configured";
+      aiStatus.textContent = "Offline";
+    }
+  } catch (error) {
+    status.textContent = "● Server unavailable";
+    aiStatus.textContent = "Offline";
+  }
+}
+
+async function sendMessage() {
+  const message = input.value.trim();
+
+  if (!message || sendBtn.disabled) return;
+
+  addMessage("You", message, "user");
+  input.value = "";
+  sendBtn.disabled = true;
+  sendBtn.textContent = "Thinking...";
+
+  const loading = document.createElement("p");
+  loading.className = "assistant";
+  loading.textContent = "NEXVORA is thinking...";
+  chat.appendChild(loading);
+  chat.scrollTop = chat.scrollHeight;
+
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ message })
+    });
+
+    const data = await response.json();
+    loading.remove();
+
+    if (!response.ok) {
+      throw new Error(data.error || "AI request failed.");
+    }
+
+    addMessage(
+      "NEXVORA",
+      data.reply || "The AI returned an empty response.",
+      "assistant"
+    );
+
+  } catch (error) {
+    loading.remove();
+    addMessage(
+      "NEXVORA Error",
+      error.message || "Unable to contact the AI. Please try again.",
+      "assistant"
+    );
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = "Send";
+    input.focus();
+  }
+}
+
+input.addEventListener("keydown", function(event) {
+  if (event.key === "Enter") {
+    sendMessage();
+  }
+});
+
+checkConnection();
 </script>
 </body>
 </html>
