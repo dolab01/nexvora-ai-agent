@@ -185,17 +185,93 @@ footer{color:#687790;text-align:center;font-size:11px;margin-top:40px}
 
 <section class="page" id="marketing">
   <div class="card">
-    <h3>◉ Marketing Studio</h3>
-    <p class="metric-note">Generate marketing ideas, captions, sales copy and content plans.</p>
+    <h3>◉ NEXVORA Marketing Studio</h3>
+    <p class="metric-note">Your AI-powered content and marketing campaign creator.</p>
+
     <form id="marketingForm">
-      <div class="field"><label>What are you promoting?</label><input id="campaignProduct" placeholder="AI Income Starter Kit" required></div>
-      <div class="form-row">
-        <div class="field"><label>Platform</label><select id="campaignPlatform"><option>Facebook</option><option>TikTok</option><option>Instagram</option><option>YouTube</option><option>WhatsApp</option><option>Multiple platforms</option></select></div>
-        <div class="field"><label>Content type</label><select id="campaignType"><option>7-day marketing plan</option><option>Sales caption</option><option>Promotional post</option><option>Short video script</option><option>Product description</option><option>30-day content calendar</option></select></div>
+      <div class="field">
+        <label>Product or service name</label>
+        <input id="campaignProduct" placeholder="AI Income Starter Kit" required>
       </div>
-      <button class="btn" id="marketingBtn">Generate with AI</button>
+
+      <div class="field">
+        <label>Describe your product and its benefits</label>
+        <textarea id="campaignDetails" placeholder="Explain what your product offers and how it helps customers..."></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label>Platform</label>
+          <select id="campaignPlatform">
+            <option>Facebook</option>
+            <option>TikTok</option>
+            <option>Instagram</option>
+            <option>YouTube</option>
+            <option>WhatsApp</option>
+            <option>Multiple platforms</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Content type</label>
+          <select id="campaignType">
+            <option>High-converting social media post</option>
+            <option>Short video script (30 seconds)</option>
+            <option>Short video script (60 seconds)</option>
+            <option>7-day marketing campaign</option>
+            <option>30-day content calendar</option>
+            <option>Product description</option>
+            <option>Sales caption</option>
+            <option>WhatsApp promotional message</option>
+            <option>Product launch campaign</option>
+            <option>Complete marketing strategy</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label>Target audience</label>
+          <input id="campaignAudience" placeholder="Beginners, students, entrepreneurs...">
+        </div>
+
+        <div class="field">
+          <label>Marketing tone</label>
+          <select id="campaignTone">
+            <option>Professional and persuasive</option>
+            <option>Friendly and conversational</option>
+            <option>Funny and entertaining</option>
+            <option>Inspirational</option>
+            <option>Bold and attention-grabbing</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Main marketing goal</label>
+        <select id="campaignGoal">
+          <option>Generate more sales</option>
+          <option>Increase brand awareness</option>
+          <option>Grow social media followers</option>
+          <option>Get more product enquiries</option>
+          <option>Build customer trust</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Special offer or call to action (optional)</label>
+        <input id="campaignOffer" placeholder="Get your copy today...">
+      </div>
+
+      <button class="btn" id="marketingBtn" type="submit">✧ Generate Marketing Content</button>
     </form>
+
+    <div class="section-title">Your AI-generated content</div>
     <div class="result" id="marketingResult">Your marketing content will appear here.</div>
+
+    <button class="btn secondary" type="button" onclick="copyMarketingContent()" style="margin-top:12px">
+      Copy Generated Content
+    </button>
   </div>
 </section>
 
@@ -403,22 +479,76 @@ $("chatForm").addEventListener("submit",async e=>{
   }finally{$("sendBtn").disabled=false;}
 });
 
-$("marketingForm").addEventListener("submit",async e=>{
+$("marketingForm").addEventListener("submit", async e => {
   e.preventDefault();
-  const product=$("campaignProduct").value.trim();
-  const platform=$("campaignPlatform").value;
-  const type=$("campaignType").value;
-  const button=$("marketingBtn");
-  const result=$("marketingResult");
-  button.disabled=true;button.textContent="Generating...";
-  result.textContent="NEXVORA is creating your marketing content...";
-  try{
-    const prompt=`Create a ${type} for my product: ${product}. Target platform: ${platform}. Give practical, engaging, honest marketing content with captions and calls to action.`;
-    result.textContent=await askAI(prompt);
+
+  const product = $("campaignProduct").value.trim();
+  const details = $("campaignDetails").value.trim();
+  const platform = $("campaignPlatform").value;
+  const type = $("campaignType").value;
+  const audience = $("campaignAudience").value.trim() || "People interested in this product";
+  const tone = $("campaignTone").value;
+  const goal = $("campaignGoal").value;
+  const offer = $("campaignOffer").value.trim() || "Include a suitable call to action";
+
+  const button = $("marketingBtn");
+  const result = $("marketingResult");
+
+  const prompt = `
+You are NEXVORA Business Manager, an expert digital marketing strategist.
+
+Create professional, practical marketing content for this product:
+
+PRODUCT: ${product}
+PRODUCT DETAILS: ${details || "Use the product name and avoid inventing features."}
+PLATFORM: ${platform}
+CONTENT TYPE: ${type}
+TARGET AUDIENCE: ${audience}
+TONE: ${tone}
+MARKETING GOAL: ${goal}
+OFFER OR CALL TO ACTION: ${offer}
+
+INSTRUCTIONS:
+1. Create original, engaging content suitable for the selected platform.
+2. Start with a strong attention-grabbing hook.
+3. Make the benefits clear without making false promises.
+4. Include persuasive but honest sales language.
+5. Include a suitable call to action.
+6. Provide relevant hashtags where appropriate.
+7. For video scripts, include scenes, spoken dialogue and on-screen text.
+8. For campaigns and calendars, organize the content by day.
+9. Make the content practical and ready to publish.
+10. Never invent customer testimonials, sales figures or product features.
+
+Present the result with clear headings and professional formatting.
+`;
+
+  button.disabled = true;
+  button.textContent = "Generating...";
+  result.textContent = "NEXVORA is creating your marketing content...";
+
+  try {
+    const content = await askAI(prompt);
+    result.textContent = content || "No content was generated.";
     recordActivity("Marketing content generated");
-  }catch(error){result.textContent="Error: "+error.message;}
-  finally{button.disabled=false;button.textContent="Generate with AI";}
+  } catch (error) {
+    result.textContent = "Marketing Error: " + error.message;
+  } finally {
+    button.disabled = false;
+    button.textContent = "✧ Generate Marketing Content";
+  }
 });
+
+async function copyMarketingContent() {
+  const content = $("marketingResult").textContent;
+
+  try {
+    await navigator.clipboard.writeText(content);
+    alert("Marketing content copied successfully!");
+  } catch (error) {
+    alert("Copy failed. Please select and copy the content manually.");
+  }
+}
 
 renderAll();
 </script>
