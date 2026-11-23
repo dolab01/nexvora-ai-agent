@@ -7,13 +7,20 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json({ limit: "20kb" }));
 app.use(express.static(__dirname));
 
+const MODEL = "gemini-3.1-flash-lite";
+
 const instructions = `
 You are NEXVORA AI, an intelligent digital business manager.
+
 Your business is NEXVORA, a digital products store.
 
-Help grow the business, create marketing campaigns,
-write product descriptions, suggest realistic online
-business opportunities and improve customer experience.
+Your responsibilities:
+1. Help grow the digital products business.
+2. Generate marketing campaigns and social media content.
+3. Write product descriptions and sales copy.
+4. Suggest realistic online business opportunities.
+5. Help improve customer experience.
+6. Analyze business ideas and suggest practical actions.
 
 Be professional, friendly, practical and honest.
 Never promise guaranteed income.
@@ -26,20 +33,22 @@ app.get("/api/health", (req, res) => {
     status: "online",
     aiConnected: Boolean(process.env.GEMINI_API_KEY),
     agent: "NEXVORA AI",
-    provider: "Google Gemini"
+    provider: "Google Gemini",
+    model: MODEL
   });
 });
 
 app.post("/api/chat", async (req, res) => {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
-    const message = req.body.message;
 
     if (!apiKey) {
       return res.status(503).json({
         error: "Gemini API key is missing in Render."
       });
     }
+
+    const message = req.body?.message;
 
     if (typeof message !== "string" || !message.trim()) {
       return res.status(400).json({
@@ -49,12 +58,12 @@ app.post("/api/chat", async (req, res) => {
 
     if (message.length > 4000) {
       return res.status(400).json({
-        error: "Message is too long."
+        error: "Message is too long. Maximum 4000 characters."
       });
     }
 
     const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/interactions",
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
       {
         method: "POST",
         headers: {
@@ -62,8 +71,19 @@ app.post("/api/chat", async (req, res) => {
           "x-goog-api-key": apiKey
         },
         body: JSON.stringify({
-          model: "gemini-3.8-flash",
-          input: instructions + "\n\nUser request: " + message.trim()
+          systemInstruction: {
+            parts: [{ text: instructions }]
+          },
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: message.trim() }]
+            }
+          ],
+          generationConfig: {
+            maxOutputTokens: 1200,
+            temperature: 0.7
+          }
         })
       }
     );
@@ -72,26 +92,35 @@ app.post("/api/chat", async (req, res) => {
 
     if (!response.ok) {
       console.error(
-        "Gemini API error:",
+        "Gemini error:",
         response.status,
-        JSON.stringify(data.error || data)
+        data.error?.message || JSON.stringify(data)
       );
 
+      if (response.status === 429) {
+        return res.status(429).json({
+          error: "Gemini free usage limit reached. Please try again later."
+        });
+      }
+
+      if (response.status === 503) {
+        return res.status(503).json({
+          error: "Gemini is temporarily busy. Please try again shortly."
+        });
+      }
+
       return res.status(502).json({
-        error: "Gemini API error. Check Render logs for details."
+        error: "Gemini could not process your request. Check Render logs."
       });
     }
 
-    const reply = data.output_text ||
-      (data.steps || [])
-        .filter(step => step.type === "model_output")
-        .flatMap(step => step.content || [])
-        .filter(part => part.type === "text")
-        .map(part => part.text)
-        .join("\n");
+    const reply = data.candidates?.[0]?.content?.parts
+      ?.map(part => part.text || "")
+      .join("")
+      .trim();
 
     if (!reply) {
-      console.error("Gemini returned no text:", JSON.stringify(data));
+      console.error("Empty Gemini response:", JSON.stringify(data));
 
       return res.status(502).json({
         error: "Gemini returned an empty response."
