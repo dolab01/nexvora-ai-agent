@@ -110,6 +110,7 @@ footer{color:#687790;text-align:center;font-size:11px;margin-top:40px}
     <button data-page="tasks" type="button" onclick="showPage('tasks')">☑ Daily Tasks</button>
     <button data-page="insights" type="button" onclick="showPage('insights')">✦ Business Insights</button>
     <button data-page="daily" type="button" onclick="showPage('daily')">☀ Daily Manager</button>
+    <button data-page="creator" type="button" onclick="showPage('creator')">✎ AI Product Creator</button>
   </nav>
   <div class="sidebar-bottom">
     <strong>NEXVORA AI</strong><br><br>
@@ -379,6 +380,32 @@ footer{color:#687790;text-align:center;font-size:11px;margin-top:40px}
   </div>
 </section>
 
+
+<section class="page" id="creator">
+  <div class="card">
+    <h3>✎ AI Digital Product Creator</h3>
+    <p class="metric-note">Create original digital product drafts such as ebooks, guides, workbooks and checklists. Review and edit the content before selling it.</p>
+    <form id="creatorForm">
+      <div class="field"><label>Product title or working idea</label><input id="creatorTitle" placeholder="The Beginner's Guide to Making Money Online" required></div>
+      <div class="form-row">
+        <div class="field"><label>Product format</label><select id="creatorFormat"><option>Ebook / practical guide</option><option>Workbook with exercises</option><option>Checklist / action plan</option><option>Step-by-step course outline</option><option>Templates and swipe files</option><option>30-day challenge</option></select></div>
+        <div class="field"><label>Target audience</label><input id="creatorAudience" placeholder="Beginners, students, small business owners..." required></div>
+      </div>
+      <div class="field"><label>What should this product teach or help people achieve?</label><textarea id="creatorTopic" placeholder="Describe the topic, problem it solves and the practical outcome..." required></textarea></div>
+      <div class="form-row">
+        <div class="field"><label>Content size</label><select id="creatorLength"><option>Short: 5–8 sections</option><option selected>Standard: 8–12 detailed sections</option><option>Detailed: 12–18 detailed sections</option></select></div>
+        <div class="field"><label>Writing style</label><select id="creatorTone"><option>Simple and beginner-friendly</option><option>Professional and practical</option><option>Friendly and conversational</option><option>Motivational and engaging</option></select></div>
+      </div>
+      <div class="field"><label>Extra instructions (optional)</label><textarea id="creatorNotes" placeholder="Include examples, exercises, templates, Nigerian context, or anything else..."></textarea></div>
+      <button class="btn" id="creatorBtn" type="submit">✎ Create My Digital Product</button>
+    </form>
+    <div class="section-title">Your generated product draft</div>
+    <div class="result" id="creatorResult">Complete the details above and select “Create My Digital Product”.</div>
+    <button class="btn secondary" type="button" onclick="copyProductDraft()" style="margin-top:12px">Copy Product Draft</button>
+    <p class="metric-note" style="margin-top:12px">This creates editable text, not a finished PDF or an automatically published Selar product. Check facts, add your own expertise and review the final product before selling it.</p>
+  </div>
+</section>
+
 <footer>NEXVORA AI · Your digital business command centre</footer>
 </main>
 </div>
@@ -420,7 +447,8 @@ function showPage(page) {
     sales:"Sales Tracker",
     tasks:"Daily Business Tasks",
     insights:"Business Insights",
-    daily:"Daily Business Manager"
+    daily:"Daily Business Manager",
+    creator:"AI Product Creator"
   };
   $("pageTitle").textContent=titles[page] || "NEXVORA";
 }
@@ -790,6 +818,54 @@ $("growthForm").addEventListener("submit", async e => {
     button.textContent="✧ Create My 7-Day Growth Plan";
   }
 });
+
+
+$("creatorForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const title=$("creatorTitle").value.trim();
+  const format=$("creatorFormat").value;
+  const audience=$("creatorAudience").value.trim();
+  const topic=$("creatorTopic").value.trim();
+  const length=$("creatorLength").value;
+  const tone=$("creatorTone").value;
+  const notes=$("creatorNotes").value.trim();
+  const button=$("creatorBtn"), result=$("creatorResult");
+  const prompt=[
+    "You are NEXVORA, an expert digital product editor and instructional writer.",
+    "Create a substantial, original, useful first draft of a digital product based on the brief below.",
+    "TITLE: "+title,
+    "FORMAT: "+format,
+    "TARGET AUDIENCE: "+audience,
+    "TOPIC AND OUTCOME: "+topic,
+    "SIZE: "+length,
+    "STYLE: "+tone,
+    "EXTRA INSTRUCTIONS: "+(notes || "None supplied."),
+    "Include a compelling title and subtitle, product promise without guaranteed results, introduction, table of contents, detailed practical sections with examples, exercises or checklist where appropriate, conclusion and next-step action plan.",
+    "Make the content specific, original, actionable and easy to understand. Avoid filler and repetition. Do not invent research, statistics, citations, testimonials, credentials or guaranteed outcomes. Mark claims that need verification. Do not copy existing books or copyrighted material.",
+    "Return the draft in clean plain text with Markdown headings. If too long for one response, provide a complete structured first part and clearly identify remaining sections."
+  ].join(String.fromCharCode(10));
+  button.disabled=true;
+  button.textContent="Creating product...";
+  result.textContent="NEXVORA is writing your digital product draft...";
+  try {
+    const draft=await askAI(prompt);
+    result.textContent=draft || "No product draft was generated.";
+    recordActivity("Digital product draft generated");
+  } catch(error) {
+    result.textContent="Product Creator Error: "+error.message;
+  } finally {
+    button.disabled=false;
+    button.textContent="✎ Create My Digital Product";
+  }
+});
+async function copyProductDraft(){
+  try {
+    await navigator.clipboard.writeText($("creatorResult").textContent);
+    alert("Product draft copied successfully!");
+  } catch(error) {
+    alert("Copy failed. Please select and copy the draft manually.");
+  }
+}
 
 async function copyGrowthPlan(){
   const content=$("growthResult").textContent;
