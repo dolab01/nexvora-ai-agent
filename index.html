@@ -472,14 +472,24 @@ function safeURL(value){
 }
 
 async function askAI(message){
-  const response=await fetch("/api/chat",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({message})
-  });
-  const data=await response.json();
-  if(!response.ok)throw new Error(data.error||"AI request failed.");
-  return data.reply;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60000);
+  try {
+    const response=await fetch("/api/chat",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({message}),
+      signal:controller.signal
+    });
+    const data=await response.json();
+    if(!response.ok)throw new Error(data.error||"AI request failed.");
+    return data.reply;
+  } catch(error) {
+    if(error.name==="AbortError") throw new Error("The AI took too long to respond. Please try again.");
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function addBubble(text,type){
