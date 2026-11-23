@@ -866,7 +866,13 @@ function exportProductPDF(){
     return;
   }
   const title=$("creatorTitle").value.trim() || "NEXVORA Digital Product";
+  const author=prompt("Enter your author or brand name:", "NEXVORA");
+  if(author===null)return;
+  const brand=author.trim() || "NEXVORA";
+  const date=new Date().toLocaleDateString("en-NG",{day:"numeric",month:"long",year:"numeric"});
   const safeTitle=escapeHTML(title);
+  const safeBrand=escapeHTML(brand);
+  const safeDate=escapeHTML(date);
   const safeContent=escapeHTML(content);
   const printWindow=window.open("","_blank");
   if(!printWindow){
@@ -876,13 +882,29 @@ function exportProductPDF(){
   printWindow.document.open();
   printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${safeTitle}</title>
   <style>
-    body{font-family:Arial,sans-serif;color:#222;max-width:800px;margin:40px auto;padding:0 24px;line-height:1.65}
-    h1{font-size:24px;border-bottom:2px solid #333;padding-bottom:12px}
-    pre{font:14px/1.7 Arial,sans-serif;white-space:pre-wrap;overflow-wrap:break-word}
-    @page{size:A4;margin:20mm}
-    @media print{body{margin:0;max-width:none;padding:0}h1{break-after:avoid}}
-  </style></head><body><h1>${safeTitle}</h1><pre>${safeContent}</pre>
-  <script>window.onload=function(){window.focus();window.print();};<\/script>
+    *{box-sizing:border-box}
+    body{font-family:Arial,sans-serif;color:#222;margin:0;line-height:1.65}
+    .cover{min-height:250mm;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:25mm 18mm;page-break-after:always;border:10px solid #25234b}
+    .brand{font-size:13px;letter-spacing:4px;text-transform:uppercase;color:#6558b8;font-weight:bold;margin-bottom:55px}
+    .cover h1{font-size:34px;line-height:1.2;margin:0 0 22px;color:#17172d;overflow-wrap:anywhere}
+    .rule{width:90px;height:4px;background:#8274df;margin:10px auto 28px}
+    .byline{font-size:16px;color:#555}
+    .date{font-size:12px;color:#777;margin-top:55px}
+    .content{padding:20mm}
+    .content h2{font-size:21px}
+    pre{font:14px/1.7 Arial,sans-serif;white-space:pre-wrap;overflow-wrap:break-word;margin:0}
+    @page{size:A4;margin:0}
+    @media print{.cover{height:297mm;min-height:0}.content{padding:20mm}}
+  </style></head><body>
+  <section class="cover">
+    <div class="brand">${safeBrand}</div>
+    <h1>${safeTitle}</h1>
+    <div class="rule"></div>
+    <div class="byline">Created by ${safeBrand}</div>
+    <div class="date">${safeDate}</div>
+  </section>
+  <section class="content"><pre>${safeContent}</pre></section>
+  <script>window.onload=function(){window.focus();window.print();};<\\/script>
   </body></html>`);
   printWindow.document.close();
 }
