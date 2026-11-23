@@ -402,6 +402,7 @@ footer{color:#687790;text-align:center;font-size:11px;margin-top:40px}
     <div class="section-title">Your generated product draft</div>
     <div class="result" id="creatorResult">Complete the details above and select “Create My Digital Product”.</div>
     <button class="btn secondary" type="button" onclick="copyProductDraft()" style="margin-top:12px">Copy Product Draft</button>
+    <button class="btn" type="button" onclick="exportProductPDF()" style="margin-top:12px;margin-left:8px">Download as PDF</button>
     <p class="metric-note" style="margin-top:12px">This creates editable text, not a finished PDF or an automatically published Selar product. Check facts, add your own expertise and review the final product before selling it.</p>
   </div>
 </section>
@@ -858,6 +859,33 @@ $("creatorForm").addEventListener("submit", async e => {
     button.textContent="✎ Create My Digital Product";
   }
 });
+function exportProductPDF(){
+  const content=$("creatorResult").textContent.trim();
+  if(!content || content==="Complete the details above and select “Create My Digital Product”."){
+    alert("Please create your digital product first.");
+    return;
+  }
+  const title=$("creatorTitle").value.trim() || "NEXVORA Digital Product";
+  const safeTitle=escapeHTML(title);
+  const safeContent=escapeHTML(content);
+  const printWindow=window.open("","_blank");
+  if(!printWindow){
+    alert("Your browser blocked the PDF window. Allow pop-ups for this site, then try again.");
+    return;
+  }
+  printWindow.document.open();
+  printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${safeTitle}</title>
+  <style>
+    body{font-family:Arial,sans-serif;color:#222;max-width:800px;margin:40px auto;padding:0 24px;line-height:1.65}
+    h1{font-size:24px;border-bottom:2px solid #333;padding-bottom:12px}
+    pre{font:14px/1.7 Arial,sans-serif;white-space:pre-wrap;overflow-wrap:break-word}
+    @page{size:A4;margin:20mm}
+    @media print{body{margin:0;max-width:none;padding:0}h1{break-after:avoid}}
+  </style></head><body><h1>${safeTitle}</h1><pre>${safeContent}</pre>
+  <script>window.onload=function(){window.focus();window.print();};<\/script>
+  </body></html>`);
+  printWindow.document.close();
+}
 async function copyProductDraft(){
   try {
     await navigator.clipboard.writeText($("creatorResult").textContent);
