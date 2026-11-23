@@ -870,43 +870,49 @@ function exportProductPDF(){
   if(author===null)return;
   const brand=author.trim() || "NEXVORA";
   const date=new Date().toLocaleDateString("en-NG",{day:"numeric",month:"long",year:"numeric"});
-  const safeTitle=escapeHTML(title);
-  const safeBrand=escapeHTML(brand);
-  const safeDate=escapeHTML(date);
-  const safeContent=escapeHTML(content);
-  const printWindow=window.open("","_blank");
-  if(!printWindow){
-    alert("Your browser blocked the PDF window. Allow pop-ups for this site, then try again.");
-    return;
-  }
-  printWindow.document.open();
-  printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${safeTitle}</title>
-  <style>
-    *{box-sizing:border-box}
-    body{font-family:Arial,sans-serif;color:#222;margin:0;line-height:1.65}
-    .cover{min-height:250mm;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:25mm 18mm;page-break-after:always;border:10px solid #25234b}
-    .brand{font-size:13px;letter-spacing:4px;text-transform:uppercase;color:#6558b8;font-weight:bold;margin-bottom:55px}
-    .cover h1{font-size:34px;line-height:1.2;margin:0 0 22px;color:#17172d;overflow-wrap:anywhere}
-    .rule{width:90px;height:4px;background:#8274df;margin:10px auto 28px}
-    .byline{font-size:16px;color:#555}
-    .date{font-size:12px;color:#777;margin-top:55px}
-    .content{padding:20mm}
-    .content h2{font-size:21px}
-    pre{font:14px/1.7 Arial,sans-serif;white-space:pre-wrap;overflow-wrap:break-word;margin:0}
-    @page{size:A4;margin:0}
-    @media print{.cover{height:297mm;min-height:0}.content{padding:20mm}}
-  </style></head><body>
-  <section class="cover">
-    <div class="brand">${safeBrand}</div>
-    <h1>${safeTitle}</h1>
-    <div class="rule"></div>
-    <div class="byline">Created by ${safeBrand}</div>
-    <div class="date">${safeDate}</div>
-  </section>
-  <section class="content"><pre>${safeContent}</pre></section>
-  <script>window.onload=function(){window.focus();window.print();};<\\/script>
-  </body></html>`);
-  printWindow.document.close();
+  const printArea=document.createElement("div");
+  printArea.id="nexvora-print-area";
+  printArea.innerHTML=`
+    <section class="nex-cover">
+      <div class="nex-brand">${escapeHTML(brand)}</div>
+      <h1>${escapeHTML(title)}</h1>
+      <div class="nex-rule"></div>
+      <div class="nex-byline">Created by ${escapeHTML(brand)}</div>
+      <div class="nex-date">${escapeHTML(date)}</div>
+    </section>
+    <section class="nex-content"><pre>${escapeHTML(content)}</pre></section>`;
+  const printStyle=document.createElement("style");
+  printStyle.id="nexvora-print-style";
+  printStyle.textContent=`
+    @media print{
+      body.nexvora-printing > *:not(#nexvora-print-area){display:none!important}
+      body.nexvora-printing{background:#fff!important;color:#222!important;margin:0!important}
+      #nexvora-print-area{display:block!important;font-family:Arial,sans-serif;color:#222;line-height:1.65}
+      #nexvora-print-area *{box-sizing:border-box}
+      #nexvora-print-area .nex-cover{height:297mm;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:25mm 18mm;border:10px solid #25234b;page-break-after:always}
+      #nexvora-print-area .nex-brand{font-size:13px;letter-spacing:4px;text-transform:uppercase;color:#6558b8;font-weight:bold;margin-bottom:55px}
+      #nexvora-print-area h1{font-size:34px;line-height:1.2;margin:0 0 22px;color:#17172d;overflow-wrap:anywhere}
+      #nexvora-print-area .nex-rule{width:90px;height:4px;background:#8274df;margin:10px auto 28px}
+      #nexvora-print-area .nex-byline{font-size:16px;color:#555}
+      #nexvora-print-area .nex-date{font-size:12px;color:#777;margin-top:55px}
+      #nexvora-print-area .nex-content{padding:20mm}
+      #nexvora-print-area pre{font:14px/1.7 Arial,sans-serif;white-space:pre-wrap;overflow-wrap:break-word;margin:0}
+      @page{size:A4;margin:0}
+    }
+    @media screen{#nexvora-print-area{display:none}}
+  `;
+  document.head.appendChild(printStyle);
+  document.body.appendChild(printArea);
+  document.body.classList.add("nexvora-printing");
+  const cleanup=()=>{
+    document.body.classList.remove("nexvora-printing");
+    printArea.remove();
+    printStyle.remove();
+    window.removeEventListener("afterprint",cleanup);
+  };
+  window.addEventListener("afterprint",cleanup);
+  window.print();
+  setTimeout(()=>{if(document.body.contains(printArea))cleanup();},60000);
 }
 async function copyProductDraft(){
   try {
