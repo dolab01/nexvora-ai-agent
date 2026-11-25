@@ -543,11 +543,14 @@ function renderSalesStats(){
   $("salesBestCount").textContent=best?best[1].count+" sales · "+money(best[1].revenue):"No sales recorded yet";
 }
 function renderSales() {
-  const visibleSales=allSales();
-  $("salesTable").innerHTML=visibleSales.map((s,i)=>`
+  const remoteRows=selarSales.map(s=>`
+    <tr><td>${escapeHTML(new Date(s.sold_at).toLocaleString())}</td><td>${escapeHTML(s.product_name)}</td><td>${money(s.amount)}</td>
+    <td><span class="metric-note">Selar</span></td></tr>`).join("");
+  const localRows=sales.map((s,i)=>`
     <tr><td>${escapeHTML(s.date)}</td><td>${escapeHTML(s.product)}</td><td>${money(s.amount)}</td>
-    <td>${s.external?"<span class=\"metric-note\">Selar</span>":`<button class="btn danger" onclick="deleteSale(${i})">Delete</button>`}</td></tr>`).join("");
-  $("salesEmpty").style.display=visibleSales.length?"none":"block";
+    <td><button class="btn danger" onclick="deleteSale(${i})">Delete</button></td></tr>`).join("");
+  $("salesTable").innerHTML=remoteRows+localRows;
+  $("salesEmpty").style.display=(selarSales.length+sales.length)?"none":"block";
   renderSalesStats();
 }
 function deleteSale(i) {
