@@ -7,6 +7,77 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json({ limit: "20kb" }));
 app.use(express.static(__dirname));
 
+const crypto = require("crypto");
+
+function dashboardSessionValid(req) {
+  const secret = process.env.NEXVORA_DASHBOARD_PASSWORD;
+  if (!secret) return false;
+  const cookie = String(req.headers.cookie || "").split(";").map(v => v.trim()).find(v => v.startsWith("nexvora_session="));
+  if (!cookie) return false;
+  const token = decodeURIComponent(cookie.slice("nexvora_session=".length));
+  const [expiresText, signature] = token.split(".");
+  const expires = Number(expiresText);
+  if (!Number.isFinite(expires) || expires < Date.now() || !signature) return false;
+  const expected = crypto.createHmac("sha256", secret).update(expiresText).digest("hex");
+  const a = Buffer.from(signature);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function requireDashboardAuth(req, res, next) {
+  if (dashboardSessionValid(req)) return next();
+  return res.status(401).json({ error: "Please sign in to NEXVORA." });
+}
+
+app.post("/api/login", (req, res) => {
+  const expected = process.env.NEXVORA_DASHBOARD_PASSWORD || "";
+  const supplied = typeof req.body?.password === "string" ? req.body.password : "";
+  if (!expected) return res.status(503).json({ error: "Dashboard password is not configured yet." });
+  const a = Buffer.from(supplied);
+  const b = Buffer.from(expected);
+  if (!a.length || a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    return res.status(401).json({ error: "Incorrect password. Please try again." });
+  }
+  const expiresText = String(Date.now() + 12 * 60 * 60 * 1000);
+  const signature = crypto.createHmac("sha256", expected).update(expiresText).digest("hex");
+  res.setHeader("Set-Cookie", "nexvora_session=" + encodeURIComponent(expiresText + "." + signature) + "; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200" + (process.env.NODE_ENV === "production" ? "; Secure" : ""));
+  return res.json({ authenticated: true });
+});
+
+app.get("/api/session", (req, res) => {
+  return res.json({ authenticated: dashboardSessionValid(req), configured: Boolean(process.env.NEXVORA_DASHBOARD_PASSWORD) });
+});
+
+app.post("/api/logout", (req, res) => {
+  res.setHeader("Set-Cookie", "nexvora_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0" + (process.env.NODE_ENV === "production" ? "; Secure" : ""));
+  return res.json({ loggedOut: true });
+});
+
+app.get("/api/sales", requireDashboardAuth, async (req, res) => {
+  try {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !supabaseKey) return res.status(503).json({ error: "Sales database is not configured." });
+    const endpoint = new URL("/rest/v1/selar_sales", supabaseUrl);
+    endpoint.searchParams.set("select", "external_order_id,product_name,amount,currency,status,sold_at");
+    endpoint.searchParams.set("order", "sold_at.desc");
+    endpoint.searchParams.set("limit", "500");
+    const response = await fetch(endpoint, {
+      headers: { "apikey": supabaseKey, "Authorization": "Bearer " + supabaseKey }
+    });
+    if (!response.ok) {
+      console.error("Supabase sales read failed:", response.status, await response.text());
+      return res.status(502).json({ error: "Could not load sales from the database." });
+    }
+    const rows = await response.json();
+    return res.json({ sales: rows });
+  } catch (error) {
+    console.error("Sales read error:", error.message);
+    return res.status(500).json({ error: "Could not load sales." });
+  }
+});
+
+
 const MODEL = "openai/gpt-oss-120b";
 
 const instructions = `
@@ -112,7 +183,7 @@ app.post("/api/selar/webhook", async (req, res) => {
   }
 });
 
-app.post("/api/chat", async (req, res) => {
+app.post("/api/chat", requireDashboardAuth, async (req, res) => {
   try {
     const apiKey = process.env.GROQ_API_KEY;
 
