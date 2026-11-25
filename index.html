@@ -92,9 +92,27 @@ footer{color:#687790;text-align:center;font-size:11px;margin-top:40px}
  .chat-form{flex-wrap:wrap}
  .chat-form input{min-width:100%}
 }
+
+.login-gate{position:fixed;inset:0;z-index:9999;background:#0b1020;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{width:min(420px,100%);background:#141c30;border:1px solid #293550;border-radius:18px;padding:30px;box-shadow:0 20px 80px #0008}
+.login-card h2{margin:22px 0 8px}.login-card .logo{padding:0}.login-card .btn{width:100%}
+body.dashboard-locked .layout{visibility:hidden}
+
 </style>
 </head>
-<body>
+<body class="dashboard-locked">
+
+<div id="loginGate" class="login-gate">
+  <form id="loginForm" class="login-card">
+    <div class="logo">NEX<span>VORA</span></div>
+    <p class="metric-note">Private business dashboard</p>
+    <h2>Welcome back</h2>
+    <div class="field"><label for="dashboardPassword">Dashboard password</label><input id="dashboardPassword" type="password" autocomplete="current-password" required></div>
+    <button class="btn" id="loginButton" type="submit">Sign in securely</button>
+    <p id="loginMessage" class="metric-note" role="status"></p>
+  </form>
+</div>
+
 <div class="layout">
 <aside class="sidebar">
   <div class="logo">NEX<span>VORA</span></div>
@@ -432,6 +450,7 @@ function save(key, data) {
 
 let products = load("products");
 let sales = load("sales");
+let selarSales = [];
 let tasks = load("tasks");
 let activity = load("activity");
 
@@ -495,17 +514,19 @@ function saleDateKey(s){
   }
   return "";
 }
+function allSales(){ return [...selarSales.map(s=>({product:s.product_name,amount:Number(s.amount||0),date:new Date(s.sold_at).toLocaleString(),dateKey:(s.sold_at||"").slice(0,10),external:true})), ...sales]; }
 function renderSalesStats(){
+  const visibleSales=allSales();
   const now=new Date();
   const todayKey=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0");
   const monthKey=todayKey.slice(0,7);
-  const todaySales=sales.filter(s=>saleDateKey(s)===todayKey);
-  const monthSales=sales.filter(s=>saleDateKey(s).startsWith(monthKey));
-  const total=sales.reduce((sum,s)=>sum+Number(s.amount||0),0);
+  const todaySales=visibleSales.filter(s=>saleDateKey(s)===todayKey);
+  const monthSales=visibleSales.filter(s=>saleDateKey(s).startsWith(monthKey));
+  const total=visibleSales.reduce((sum,s)=>sum+Number(s.amount||0),0);
   const todayTotal=todaySales.reduce((sum,s)=>sum+Number(s.amount||0),0);
   const monthTotal=monthSales.reduce((sum,s)=>sum+Number(s.amount||0),0);
   const ranking={};
-  sales.forEach(s=>{
+  visibleSales.forEach(s=>{
     const name=s.product||"Unnamed product";
     if(!ranking[name]) ranking[name]={count:0,revenue:0};
     ranking[name].count++;
@@ -517,15 +538,16 @@ function renderSalesStats(){
   $("salesMonthRevenue").textContent=money(monthTotal);
   $("salesMonthCount").textContent=monthSales.length+" sales this month";
   $("salesTotalRevenue").textContent=money(total);
-  $("salesTotalCount").textContent=sales.length+" recorded sales";
+  $("salesTotalCount").textContent=visibleSales.length+" recorded sales";
   $("salesBestProduct").textContent=best?best[0]:"—";
   $("salesBestCount").textContent=best?best[1].count+" sales · "+money(best[1].revenue):"No sales recorded yet";
 }
 function renderSales() {
-  $("salesTable").innerHTML=sales.map((s,i)=>`
+  const visibleSales=allSales();
+  $("salesTable").innerHTML=visibleSales.map((s,i)=>`
     <tr><td>${escapeHTML(s.date)}</td><td>${escapeHTML(s.product)}</td><td>${money(s.amount)}</td>
-    <td><button class="btn danger" onclick="deleteSale(${i})">Delete</button></td></tr>`).join("");
-  $("salesEmpty").style.display=sales.length?"none":"block";
+    <td>${s.external?"<span class=\"metric-note\">Selar</span>":`<button class="btn danger" onclick="deleteSale(${i})">Delete</button>`}</td></tr>`).join("");
+  $("salesEmpty").style.display=visibleSales.length?"none":"block";
   renderSalesStats();
 }
 function deleteSale(i) {
@@ -567,8 +589,8 @@ function renderActivity(){
 
 function renderOverview(){
   $("productCount").textContent=products.length;
-  $("salesCount").textContent=sales.length;
-  $("revenue").textContent=money(sales.reduce((sum,s)=>sum+Number(s.amount),0));
+  $("salesCount").textContent=visibleSales.length;
+  $("revenue").textContent=money(visibleSales.reduce((sum,s)=>sum+Number(s.amount),0));
   $("taskCount").textContent=tasks.filter(t=>!t.done).length;
 }
 function renderAll(){
@@ -578,8 +600,8 @@ function renderAll(){
 function renderInsightStats(){
   if (!$("insightProducts")) return;
   $("insightProducts").textContent=products.length;
-  $("insightSales").textContent=sales.length;
-  $("insightRevenue").textContent=money(sales.reduce((sum,s)=>sum+Number(s.amount||0),0));
+  $("insightSales").textContent=visibleSales.length;
+  $("insightRevenue").textContent=money(visibleSales.reduce((sum,s)=>sum+Number(s.amount||0),0));
   $("insightTasks").textContent=tasks.filter(t=>!t.done).length;
 }
 
@@ -587,12 +609,12 @@ async function generateBusinessInsights(){
   const button=$("insightsBtn"), result=$("insightsResult");
   const snapshot={
     products:products.map(p=>({name:p.name,price:Number(p.price||0),hasProductLink:!!p.link})),
-    sales:sales.map(s=>({product:s.product,amount:Number(s.amount||0),date:s.date})),
+    sales:allSales().map(s=>({product:s.product,amount:Number(s.amount||0),date:s.date})),
     tasks:tasks.map(t=>({task:t.text,completed:!!t.done})),
     totals:{
       productCount:products.length,
-      recordedSales:sales.length,
-      recordedRevenue:sales.reduce((sum,s)=>sum+Number(s.amount||0),0),
+      recordedSales:visibleSales.length,
+      recordedRevenue:visibleSales.reduce((sum,s)=>sum+Number(s.amount||0),0),
       openTasks:tasks.filter(t=>!t.done).length,
       completedTasks:tasks.filter(t=>t.done).length
     }
@@ -650,8 +672,8 @@ async function generateDailyBriefing(){
   const snapshot={
     date:today,
     products:products.map(p=>({name:p.name,price:Number(p.price||0)})),
-    sales:sales.map(s=>({product:s.product,amount:Number(s.amount||0),date:s.date})),
-    recordedRevenue:sales.reduce((sum,s)=>sum+Number(s.amount||0),0),
+    sales:allSales().map(s=>({product:s.product,amount:Number(s.amount||0),date:s.date})),
+    recordedRevenue:visibleSales.reduce((sum,s)=>sum+Number(s.amount||0),0),
     openTasks,
     completedTasks:tasks.filter(t=>t.done).length
   };
@@ -972,8 +994,53 @@ async function copyGrowthPlan(){
   catch(error) { alert("Copy failed. Please select and copy the plan manually."); }
 }
 
-renderAll();
-renderDailyManager();
+
+async function initializeDashboard(){
+  const gate=$("loginGate");
+  const form=$("loginForm");
+  const message=$("loginMessage");
+  const button=$("loginButton");
+  async function unlock(){
+    try{
+      const session=await fetch("/api/session",{credentials:"same-origin"});
+      const state=await session.json();
+      if(!state.configured){
+        message.textContent="Dashboard password setup is required in Render Environment.";
+        return;
+      }
+      if(!state.authenticated)return;
+      gate.style.display="none";
+      document.body.classList.remove("dashboard-locked");
+      const response=await fetch("/api/sales",{credentials:"same-origin"});
+      if(response.ok){
+        const data=await response.json();
+        selarSales=Array.isArray(data.sales)?data.sales:[];
+      }else if(response.status===401){
+        gate.style.display="flex";
+        document.body.classList.add("dashboard-locked");
+      }
+      renderAll();
+      renderDailyManager();
+    }catch(error){
+      message.textContent="Could not connect. Please refresh and try again.";
+    }
+  }
+  form.addEventListener("submit",async e=>{
+    e.preventDefault();
+    button.disabled=true;message.textContent="Signing in...";
+    try{
+      const response=await fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({password:$("dashboardPassword").value})});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||"Sign-in failed.");
+      $("dashboardPassword").value="";
+      await unlock();
+    }catch(error){message.textContent=error.message;}
+    finally{button.disabled=false;}
+  });
+  await unlock();
+}
+
+initializeDashboard();
 </script>
 </body>
 </html>
