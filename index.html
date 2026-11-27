@@ -72,6 +72,7 @@ th{color:var(--muted);font-weight:500}
 .task-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
 .task-row input{width:auto}
 .task-row.done span{text-decoration:line-through;color:var(--muted)}
+.operations-note{color:var(--muted);font-size:12px}
 .mobile-menu{display:none}
 footer{color:#687790;text-align:center;font-size:11px;margin-top:40px}
 @media(max-width:950px){.grid{grid-template-columns:repeat(2,1fr)}}
@@ -126,6 +127,7 @@ body.dashboard-locked .layout{visibility:hidden}
     <button data-page="growth" type="button" onclick="showPage('growth')">↗ Growth Planner</button>
     <button data-page="sales" type="button" onclick="showPage('sales')">↗ Sales Tracker</button>
     <button data-page="tasks" type="button" onclick="showPage('tasks')">☑ Daily Tasks</button>
+    <button data-page="operations" type="button" onclick="showPage('operations')">▤ Operations</button>
     <button data-page="insights" type="button" onclick="showPage('insights')">✦ Business Insights</button>
     <button data-page="daily" type="button" onclick="showPage('daily')">☀ Daily Manager</button>
     <button data-page="creator" type="button" onclick="showPage('creator')">✎ AI Product Creator</button>
@@ -364,6 +366,24 @@ body.dashboard-locked .layout{visibility:hidden}
   </div>
 </section>
 
+<section class="page" id="operations">
+  <div class="grid">
+    <div class="card"><div class="metric-label">Currently running</div><div class="metric" id="opsRunning">0</div><div class="metric-note">AI tasks in progress</div></div>
+    <div class="card"><div class="metric-label">Completed tasks</div><div class="metric" id="opsCompleted">0</div><div class="metric-note">Successful AI requests</div></div>
+    <div class="card"><div class="metric-label">Errors</div><div class="metric" id="opsErrors">0</div><div class="metric-note">Requests needing attention</div></div>
+    <div class="card"><div class="metric-label">Recorded sales</div><div class="metric" id="opsSales">0</div><div class="metric-note" id="opsRevenue">₦0 recorded revenue</div></div>
+  </div>
+  <div class="section-title">Task activity</div>
+  <div class="card">
+    <p class="metric-note">This log records work started from NEXVORA's dashboard. It does not mean background automations or external publishing are active.</p>
+    <div class="table-wrap"><table><thead><tr><th>Task</th><th>Status</th><th>Started</th><th>Details</th></tr></thead><tbody id="opsTable"></tbody></table></div>
+    <p class="empty" id="opsEmpty">No activity recorded yet. When you ask NEXVORA to create a plan or content, it will appear here.</p>
+    <button class="btn secondary" type="button" onclick="clearOperations()" style="margin-top:12px">Clear activity log</button>
+  </div>
+  <div class="section-title">Open business tasks</div>
+  <div class="card" id="opsOpenTasks"><p class="empty">No open tasks.</p></div>
+</section>
+
 <section class="page" id="insights">
   <div class="card">
     <h3>✦ AI Business Insights</h3>
@@ -453,6 +473,37 @@ let sales = load("sales");
 let selarSales = [];
 let tasks = load("tasks");
 let activity = load("activity");
+let operationLog = load("operations",[]);
+
+function logOperation(title,status,detail=""){
+  const item={id:Date.now()+"-"+Math.random().toString(16).slice(2),title,status,detail:String(detail).slice(0,180),startedAt:new Date().toISOString(),finishedAt:null};
+  operationLog.unshift(item); operationLog=operationLog.slice(0,100); save("operations",operationLog); renderOperations(); return item.id;
+}
+function updateOperation(id,status,detail=""){
+  const item=operationLog.find(x=>x.id===id); if(!item)return;
+  item.status=status; item.detail=String(detail).slice(0,180); item.finishedAt=new Date().toISOString(); save("operations",operationLog); renderOperations();
+}
+function clearOperations(){
+  if(!confirm("Clear the activity log? This will not delete products, sales or daily tasks."))return;
+  operationLog=[]; save("operations",operationLog); renderOperations();
+}
+function renderOperations(){
+  if(!$("opsTable"))return;
+  const rows=allSales();
+  $("opsRunning").textContent=operationLog.filter(x=>x.status==="Running").length;
+  $("opsCompleted").textContent=operationLog.filter(x=>x.status==="Completed").length;
+  $("opsErrors").textContent=operationLog.filter(x=>x.status==="Error").length;
+  $("opsSales").textContent=rows.length;
+  $("opsRevenue").textContent=money(rows.reduce((sum,x)=>sum+Number(x.amount||0),0))+" recorded revenue";
+  $("opsTable").innerHTML=operationLog.slice(0,30).map(x=>{
+    const stamp=new Date(x.startedAt), when=Number.isNaN(stamp.getTime())?"—":stamp.toLocaleString();
+    const color=x.status==="Completed"?"#36d399":x.status==="Error"?"#ff8295":"#f5c56b";
+    return "<tr><td>"+escapeHTML(x.title)+"</td><td><span style='color:"+color+"'>"+escapeHTML(x.status)+"</span></td><td>"+escapeHTML(when)+"</td><td>"+escapeHTML(x.detail)+"</td></tr>";
+  }).join("");
+  $("opsEmpty").style.display=operationLog.length?"none":"block";
+  const open=tasks.filter(t=>!t.done);
+  $("opsOpenTasks").innerHTML=open.length?open.map(t=>"<div class='action'>"+escapeHTML(t.text)+"</div>").join(""):"<p class='empty'>No open tasks.</p>";
+}
 
 function recordActivity(text) {
   activity.unshift({text,date:new Date().toLocaleString()});
@@ -473,6 +524,7 @@ function showPage(page) {
     growth:"AI Business Growth Planner",
     sales:"Sales Tracker",
     tasks:"Daily Business Tasks",
+    operations:"Operations Dashboard",
     insights:"Business Insights",
     daily:"Daily Business Manager",
     creator:"AI Product Creator"
@@ -597,7 +649,7 @@ function renderOverview(){
   $("taskCount").textContent=tasks.filter(t=>!t.done).length;
 }
 function renderAll(){
-  renderProducts();renderSales();renderTasks();renderOverview();renderActivity();renderInsightStats();
+  renderProducts();renderSales();renderTasks();renderOverview();renderActivity();renderInsightStats();renderOperations();
 }
 
 function renderInsightStats(){
@@ -739,6 +791,7 @@ function safeURL(value){
 }
 
 async function askAI(message){
+  const operationId=logOperation("NEXVORA AI request","Running",message.slice(0,150));
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 60000);
   try {
@@ -750,9 +803,12 @@ async function askAI(message){
     });
     const data=await response.json();
     if(!response.ok)throw new Error(data.error||"AI request failed.");
+    updateOperation(operationId,"Completed","AI response received successfully.");
     return data.reply;
   } catch(error) {
-    if(error.name==="AbortError") throw new Error("The AI took too long to respond. Please try again.");
+    const messageText=error.name==="AbortError"?"The AI took too long to respond. Please try again.":error.message;
+    updateOperation(operationId,"Error",messageText);
+    if(error.name==="AbortError") throw new Error(messageText);
     throw error;
   } finally {
     clearTimeout(timeout);
