@@ -269,6 +269,8 @@ app.post("/api/chat", requireDashboardAuth, async (req, res) => {
   }
 });
 
+require("./agent-service")(app, requireDashboardAuth);
+
 app.listen(PORT, () => {
   console.log("NEXVORA AI running on port " + PORT);
 });
