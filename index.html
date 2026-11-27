@@ -382,6 +382,38 @@ body.dashboard-locked .layout{visibility:hidden}
   </div>
   <div class="section-title">Open business tasks</div>
   <div class="card" id="opsOpenTasks"><p class="empty">No open tasks.</p></div>
+
+  <div class="section-title">Agent task queue</div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div><h3 style="margin:0">Tasks NEXVORA should work on</h3><p class="metric-note">Queue and track business work. A queued task is not automatically executed until an execution integration is connected.</p></div>
+      <button class="btn secondary" type="button" onclick="refreshAgentOperations()">Refresh</button>
+    </div>
+    <form id="agentTaskForm" style="margin-top:16px">
+      <div class="field"><label>Task title</label><input id="agentTaskTitle" maxlength="180" placeholder="Prepare a 7-day marketing plan" required></div>
+      <div class="field"><label>Details (optional)</label><textarea id="agentTaskDescription" placeholder="What should NEXVORA do? Include the outcome you want."></textarea></div>
+      <div class="form-row">
+        <div class="field"><label>Priority</label><select id="agentTaskPriority"><option value="normal">Normal</option><option value="high">High</option><option value="low">Low</option></select></div>
+        <div class="field" style="display:flex;align-items:end"><button class="btn" type="submit" id="agentTaskSubmit">Add to task queue</button></div>
+      </div>
+    </form>
+    <div id="agentTaskQueue"><p class="empty">Loading agent tasks…</p></div>
+  </div>
+
+  <div class="section-title">Approval centre</div>
+  <div class="card">
+    <h3>Actions requiring your permission</h3>
+    <p class="metric-note">Use this for payments, purchases, publishing, or sensitive account changes. Recording an approval does not itself execute the action.</p>
+    <form id="agentApprovalForm">
+      <div class="field"><label>Action needing approval</label><input id="agentApprovalTitle" maxlength="180" placeholder="Publish campaign to Facebook" required></div>
+      <div class="field"><label>Details and expected cost (if any)</label><textarea id="agentApprovalDescription" placeholder="Explain exactly what will happen, which account is affected, and any cost."></textarea></div>
+      <button class="btn secondary" type="submit" id="agentApprovalSubmit">Create approval request</button>
+    </form>
+    <div id="agentApprovalList" style="margin-top:16px"><p class="empty">Loading approval requests…</p></div>
+  </div>
+
+  <div class="section-title">Persistent activity history</div>
+  <div class="card"><div id="agentActivityList"><p class="empty">Loading activity…</p></div></div>
 </section>
 
 <section class="page" id="insights">
@@ -1054,6 +1086,75 @@ async function copyGrowthPlan(){
 }
 
 
+
+function formatAgentDate(value){
+  const d=new Date(value);
+  return Number.isNaN(d.getTime())?"—":d.toLocaleString();
+}
+async function refreshAgentOperations(){
+  const taskBox=$("agentTaskQueue"), approvalBox=$("agentApprovalList"), activityBox=$("agentActivityList");
+  if(!taskBox)return;
+  try{
+    const response=await fetch("/api/agent/overview",{credentials:"same-origin"});
+    const data=await response.json();
+    if(!response.ok)throw new Error(data.error||"Could not load operations.");
+    const tasks=data.tasks||[], approvals=data.approvals||[], events=data.activity||[];
+    taskBox.innerHTML=tasks.length?tasks.map(t=>{
+      const status=String(t.status||"queued").replace(/_/g," ");
+      const options=["queued","in_progress","completed","failed","cancelled"].map(s=>'<option value="'+s+'" '+(t.status===s?"selected":"")+'>'+s.replace(/_/g," ")+'</option>').join("");
+      return '<div class="action" style="align-items:flex-start"><div style="flex:1;min-width:180px"><strong>'+escapeHTML(t.title)+'</strong><small>'+escapeHTML(t.description||"No extra details")+' · '+escapeHTML(formatAgentDate(t.created_at))+'</small></div><div style="min-width:145px"><select aria-label="Task status" onchange="changeAgentTaskStatus(\''+t.id+'\',this.value)">'+options+'</select></div></div>';
+    }).join(""):'<p class="empty">No queued tasks yet.</p>';
+    approvalBox.innerHTML=approvals.length?approvals.map(a=>{
+      const pending=a.status==="pending";
+      return '<div class="action" style="align-items:flex-start"><div style="flex:1;min-width:180px"><strong>'+escapeHTML(a.title)+'</strong><small>'+escapeHTML(a.description||"No details supplied")+' · '+escapeHTML(formatAgentDate(a.created_at))+'</small><small>Status: '+escapeHTML(a.status)+'</small></div>'+(pending?'<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn" type="button" onclick="decideAgentApproval(\''+a.id+'\',\'approved\')">Approve</button><button class="btn danger" type="button" onclick="decideAgentApproval(\''+a.id+'\',\'rejected\')">Reject</button></div>':'')+'</div>';
+    }).join(""):'<p class="empty">No approval requests.</p>';
+    activityBox.innerHTML=events.length?events.map(e=>'<div class="action"><div><strong>'+escapeHTML(e.title)+'</strong><small>'+escapeHTML(e.detail||e.event_type)+' · '+escapeHTML(formatAgentDate(e.created_at))+'</small></div></div>').join(""):'<p class="empty">No persistent activity recorded yet.</p>';
+  }catch(error){
+    const msg=escapeHTML(error.message);
+    taskBox.innerHTML='<p class="empty">Operations database is not ready yet. '+msg+' Open the SQL file in your GitHub project and run it once in Supabase SQL Editor.</p>';
+    approvalBox.innerHTML='<p class="empty">Approval requests will appear here after the database is set up.</p>';
+    activityBox.innerHTML='<p class="empty">Persistent activity history will appear here after database setup.</p>';
+  }
+}
+async function changeAgentTaskStatus(id,status){
+  try{
+    const response=await fetch("/api/agent/tasks/"+encodeURIComponent(id),{method:"PATCH",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({status})});
+    const data=await response.json();
+    if(!response.ok)throw new Error(data.error||"Could not update task.");
+    refreshAgentOperations();
+  }catch(error){alert(error.message);}
+}
+async function decideAgentApproval(id,decision){
+  const promptText=decision==="approved"?"Approve this request? This records your permission only; it does not execute the action.":"Reject this request?";
+  if(!confirm(promptText))return;
+  try{
+    const response=await fetch("/api/agent/approvals/"+encodeURIComponent(id)+"/decision",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({decision})});
+    const data=await response.json();
+    if(!response.ok)throw new Error(data.error||"Could not record decision.");
+    refreshAgentOperations();
+  }catch(error){alert(error.message);}
+}
+$("agentTaskForm")?.addEventListener("submit",async e=>{
+  e.preventDefault();
+  const button=$("agentTaskSubmit");button.disabled=true;
+  try{
+    const response=await fetch("/api/agent/tasks",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({title:$("agentTaskTitle").value.trim(),description:$("agentTaskDescription").value.trim(),priority:$("agentTaskPriority").value})});
+    const data=await response.json();if(!response.ok)throw new Error(data.error||"Could not queue task.");
+    e.target.reset();refreshAgentOperations();
+  }catch(error){alert(error.message);}
+  finally{button.disabled=false;}
+});
+$("agentApprovalForm")?.addEventListener("submit",async e=>{
+  e.preventDefault();
+  const button=$("agentApprovalSubmit");button.disabled=true;
+  try{
+    const response=await fetch("/api/agent/approvals",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({title:$("agentApprovalTitle").value.trim(),description:$("agentApprovalDescription").value.trim(),action_type:"external_action"})});
+    const data=await response.json();if(!response.ok)throw new Error(data.error||"Could not create approval request.");
+    e.target.reset();refreshAgentOperations();
+  }catch(error){alert(error.message);}
+  finally{button.disabled=false;}
+});
+
 async function initializeDashboard(){
   const gate=$("loginGate");
   const form=$("loginForm");
@@ -1080,6 +1181,7 @@ async function initializeDashboard(){
       }
       renderAll();
       renderDailyManager();
+      refreshAgentOperations();
     }catch(error){
       message.textContent="Could not connect. Please refresh and try again.";
     }
