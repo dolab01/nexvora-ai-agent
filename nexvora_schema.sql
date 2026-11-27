@@ -44,3 +44,11 @@ alter table public.nexvora_activity enable row level security;
 
 -- No public policies are created. The server accesses these tables using
 -- the Supabase service-role key, which must remain private in Render.
+
+-- Keep the service-role key as the only application access path.
+revoke all on public.nexvora_agent_tasks from anon, authenticated;
+revoke all on public.nexvora_approvals from anon, authenticated;
+revoke all on public.nexvora_activity from anon, authenticated;
+grant all on public.nexvora_agent_tasks to service_role;
+grant all on public.nexvora_approvals to service_role;
+grant all on public.nexvora_activity to service_role;
